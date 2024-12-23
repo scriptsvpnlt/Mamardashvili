@@ -1,78 +1,113 @@
 #!/bin/bash
-apt upgrade -y
-apt update -y
-apt install curl -y
-apt install wondershaper -y
+
+# Warna dan format
 Green="\e[92;1m"
 RED="\033[1;31m"
 YELLOW="\033[33m"
 BLUE="\033[36m"
 FONT="\033[0m"
-GREENBG="\033[42;37m"
-REDBG="\033[41;37m"
 OK="${Green}--->${FONT}"
 ERROR="${RED}[ERROR]${FONT}"
-GRAY="\e[1;30m"
-NC='\e[0m'
-red='\e[1;31m'
-green='\e[0;32m'
+
+# Variabel lain
 TIME=$(date '+%d %b %Y')
 ipsaya=$(wget -qO- ipinfo.io/ip)
 
-# data Telegram
-TIMES="10"
+# Data Telegram
 CHATID="5970831071"
-KEY="7633327456:AAGE7JigJpWbJyVly-fcQ8B3S1ctqq-qYOM"
+KEY="7633327456:AAGE7JpWbJyVly-fcQ8B3S1ctqq-qYOM"
 URL="https://api.telegram.org/bot$KEY/sendMessage"
 
-# //
+# Repositori
 REPO="https://raw.githubusercontent.com/scriptsvpnlt/Mamardashvili/main/"
-# //
 
-# xray dir
+# Persiapan direktori
 mkdir -p /etc/xray
 mkdir -p /var/lib/LT
-# xray dir log
 mkdir -p /var/log/xray
-chown www-data.www-data /var/log/xray
-chmod +x /var/log/xray
-chmod +x /etc/xray
+chown www-data:www-data /var/log/xray
 touch /var/log/xray/access.log
 touch /var/log/xray/error.log
 
-clear
-function pasang_domain() {
-clear
-echo -e "   \e[97;1m ===========================================\e[0m"
-echo -e "   \e[1;32m    Please Select a Domain bellow type.     \e[0m"
-echo -e "   \e[97;1m ===========================================\e[0m"
-echo -e "   \e[1;32m  1). \e[97;1m Domain Pribadi \e[0m"
-echo -e "   \e[1;32m  2). \e[97;1m Domain Random  \e[0m"
-echo -e "   \e[97;1m ===========================================\e[0m"
-echo -e ""
-read -p "   Just Input a number [1-2]:   " host
-echo ""
-if [[ $host == "1" ]]; then
-clear
-echo -e "   \e[97;1m ===========================================\e[0m"
-echo -e "   \e[97;1m             INPUT YOUR DOMAIN              \e[0m"
-echo -e "   \e[97;1m ===========================================\e[0m"
-echo -e ""
-read -p "   input your domain :   " host1
-echo "IP=" >> /var/lib/LT/ipvps.conf
-echo $host1 > /etc/xray/domain
-echo $host1 > /root/domain
-echo ""
-elif [[ $host == "2" ]]; then
-wget ${REPO}files/cf.sh && chmod +x cf.sh && ./cf.sh
-rm -f /root/cf.sh
-clear
-else
-print_install "Random Subdomain/Domain is Used"
-clear
-fi
+# Fungsi validasi OS
+function check_os() {
+    OS=$(lsb_release -is)
+    VERSION=$(lsb_release -rs | cut -d. -f1)
+
+    if [[ "$OS" == "Ubuntu" && "$VERSION" =~ ^(20|22|24)$ ]] || \
+       [[ "$OS" == "Debian" && "$VERSION" =~ ^(10|11|12)$ ]]; then
+        echo -e "${OK} OS Supported: $OS $VERSION"
+    else
+        echo -e "${ERROR} OS Not Supported: $OS $VERSION"
+        echo -e "${YELLOW}This script only supports Ubuntu 20/22/24 and Debian 10/11/12.${FONT}"
+        exit 1
+    fi
 }
-pasang_domain
+
+# Fungsi memasang domain
+function pasang_domain() {
+    clear
+    echo -e "   \e[97;1m ===========================================\e[0m"
+    echo -e "   \e[1;32m    Please Select a Domain below type.      \e[0m"
+    echo -e "   \e[97;1m ===========================================\e[0m"
+    echo -e "   \e[1;32m  1). \e[97;1m Domain Pribadi \e[0m"
+    echo -e "   \e[1;32m  2). \e[97;1m Domain Random  \e[0m"
+    echo -e "   \e[97;1m ===========================================\e[0m"
+    echo -e ""
+    read -p "   Just Input a number [1-2]:   " host
+    echo ""
+    if [[ $host == "1" ]]; then
+        clear
+        echo -e "   \e[97;1m ===========================================\e[0m"
+        echo -e "   \e[97;1m             INPUT YOUR DOMAIN              \e[0m"
+        echo -e "   \e[97;1m ===========================================\e[0m"
+        echo -e ""
+        read -p "   Input your domain :   " host1
+
+        if [[ -z "$host1" ]]; then
+            echo -e "${ERROR} Domain cannot be empty!"
+            exit 1
+        fi
+
+        echo "$host1" > /etc/xray/domain
+        echo "$host1" > /root/domain
+        echo "IP=$host1" > /var/lib/LT/ipvps.conf
+        echo -e "${OK} Domain saved: $host1"
+    elif [[ $host == "2" ]]; then
+        wget ${REPO}files/cf.sh -O /root/cf.sh
+        chmod +x /root/cf.sh
+        ./root/cf.sh
+        rm -f /root/cf.sh
+    else
+        echo -e "${ERROR} Invalid selection. Exiting."
+        exit 1
+    fi
+}
+
+# Fungsi utama instalasi
+function main() {
+    echo -e "${OK} Checking OS compatibility..."
+    check_os
+
+    echo -e "${OK} Updating system packages..."
+    apt update -y && apt upgrade -y
+
+    echo -e "${OK} Installing dependencies..."
+    apt install -y curl wondershaper lsb-release
+
+    echo -e "${OK} Setting up directories..."
+    chmod +x /var/log/xray
+    chmod +x /etc/xray
+
+    echo -e "${OK} Configuring domain..."
+    pasang_domain
+
+    echo -e "${OK} Setup completed successfully!"
+}
+
+# Jalankan fungsi utama
+main
+
 
 
 
@@ -162,10 +197,7 @@ else
 print_error "The current user is not the root user, please switch to the root user and run the script again"
 fi
 }
-print_install "Membuat direktori xray"
 curl -s ifconfig.me > /etc/xray/ipvps
-
-
 
 # var lib LT
 mkdir -p /var/lib/LT >/dev/null 2>&1
@@ -187,31 +219,86 @@ export Arch=$( uname -m )
 export IP=$( curl -s https://ipinfo.io/ip/ )
 
 
-function first_setup(){
-timedatectl set-timezone Asia/Jakarta
-echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
-echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
-print_success "Directory Xray"
-if [[ $(cat /etc/os-release | grep -w ID | head -n1 | sed 's/=//g' | sed 's/"//g' | sed 's/ID//g') == "ubuntu" ]]; then
-echo "Setup Dependencies $(cat /etc/os-release | grep -w PRETTY_NAME | head -n1 | sed 's/=//g' | sed 's/"//g' | sed 's/PRETTY_NAME//g')"
-sudo apt update -y
-apt-get install --no-install-recommends software-properties-common
-add-apt-repository ppa:vbernat/haproxy-2.0 -y
-apt-get -y install haproxy=2.0.\*
-elif [[ $(cat /etc/os-release | grep -w ID | head -n1 | sed 's/=//g' | sed 's/"//g' | sed 's/ID//g') == "debian" ]]; then
-echo "Setup Dependencies For OS Is $(cat /etc/os-release | grep -w PRETTY_NAME | head -n1 | sed 's/=//g' | sed 's/"//g' | sed 's/PRETTY_NAME//g')"
-curl https://haproxy.debian.net/bernat.debian.org.gpg |
-gpg --dearmor >/usr/share/keyrings/haproxy.debian.net.gpg
-echo deb "[signed-by=/usr/share/keyrings/haproxy.debian.net.gpg]" \
-http://haproxy.debian.net buster-backports-1.8 main \
->/etc/apt/sources.list.d/haproxy.list
-sudo apt-get update
-apt-get -y install haproxy=1.8.\*
-else
-echo -e " Your OS Is Not Supported ($(cat /etc/os-release | grep -w PRETTY_NAME | head -n1 | sed 's/=//g' | sed 's/"//g' | sed 's/PRETTY_NAME//g') )"
-exit 1
-fi
+function first_setup() {
+    # Atur zona waktu
+    timedatectl set-timezone Asia/Jakarta
+
+    # Konfigurasi iptables-persistent
+    echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
+    echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
+
+    # Buat direktori jika diperlukan
+    echo "Membuat direktori untuk Xray..."
+    mkdir -p /etc/xray
+    mkdir -p /var/lib/LT
+
+    # Identifikasi OS dan versinya
+    OS=$(grep -w ID /etc/os-release | cut -d= -f2 | tr -d '"')
+    VERSION=$(grep -w VERSION_ID /etc/os-release | cut -d= -f2 | tr -d '"')
+
+    echo "Sistem Operasi terdeteksi: ${OS} ${VERSION}"
+
+    # Update dan instal dependensi dasar
+    apt update -y
+    apt upgrade -y
+    apt install --no-install-recommends software-properties-common -y
+
+    # Konfigurasi instalasi HAProxy berdasarkan OS dan versi
+    if [[ "$OS" == "ubuntu" ]]; then
+        case $VERSION in
+        "20.04")
+            echo "Menambahkan repository untuk Ubuntu 20.04..."
+            add-apt-repository ppa:vbernat/haproxy-2.0 -y
+            apt-get install haproxy=2.0.\* -y
+            ;;
+        "22.04" | "24.04" | "24.04.1")
+            echo "Menambahkan repository untuk Ubuntu ${VERSION}..."
+            add-apt-repository ppa:vbernat/haproxy-2.6 -y
+            apt-get install haproxy=2.6.\* -y
+            ;;
+        *)
+            echo -e "OS Ubuntu ${VERSION} tidak didukung."
+            exit 1
+            ;;
+        esac
+
+    elif [[ "$OS" == "debian" ]]; then
+        case $VERSION in
+        "10")
+            echo "Menambahkan repository untuk Debian 10 (Buster)..."
+            curl https://haproxy.debian.net/bernat.debian.org.gpg | gpg --dearmor >/usr/share/keyrings/haproxy.debian.net.gpg
+            echo "deb [signed-by=/usr/share/keyrings/haproxy.debian.net.gpg] http://haproxy.debian.net buster-backports-2.0 main" >/etc/apt/sources.list.d/haproxy.list
+            apt-get update
+            apt-get install haproxy=2.0.\* -y
+            ;;
+        "11")
+            echo "Menambahkan repository untuk Debian 11 (Bullseye)..."
+            curl https://haproxy.debian.net/bernat.debian.org.gpg | gpg --dearmor >/usr/share/keyrings/haproxy.debian.net.gpg
+            echo "deb [signed-by=/usr/share/keyrings/haproxy.debian.net.gpg] http://haproxy.debian.net bullseye-backports-2.4 main" >/etc/apt/sources.list.d/haproxy.list
+            apt-get update
+            apt-get install haproxy=2.4.\* -y
+            ;;
+        "12")
+            echo "Menambahkan repository untuk Debian 12 (Bookworm)..."
+            curl https://haproxy.debian.net/bernat.debian.org.gpg | gpg --dearmor >/usr/share/keyrings/haproxy.debian.net.gpg
+            echo "deb [signed-by=/usr/share/keyrings/haproxy.debian.net.gpg] http://haproxy.debian.net bookworm-backports-2.6 main" >/etc/apt/sources.list.d/haproxy.list
+            apt-get update
+            apt-get install haproxy=2.6.\* -y
+            ;;
+        *)
+            echo -e "OS Debian ${VERSION} tidak didukung."
+            exit 1
+            ;;
+        esac
+
+    else
+        echo -e "Sistem Operasi Anda (${OS}) tidak didukung."
+        exit 1
+    fi
+
+    echo -e "Instalasi selesai untuk ${OS} ${VERSION}."
 }
+
 clear
 function nginx_install() {
 if [[ $(cat /etc/os-release | grep -w ID | head -n1 | sed 's/=//g' | sed 's/"//g' | sed 's/ID//g') == "ubuntu" ]]; then
@@ -224,35 +311,187 @@ else
 echo -e " Your OS Is Not Supported ( ${YELLOW}$(cat /etc/os-release | grep -w PRETTY_NAME | head -n1 | sed 's/=//g' | sed 's/"//g' | sed 's/PRETTY_NAME//g')${FONT} )"
 fi
 }
+
 function base_package() {
-clear
-print_install "Menginstall Packet Yang Dibutuhkan"
-apt install zip pwgen openssl netcat socat cron bash-completion -y
-apt install figlet -y
-apt update -y
-apt upgrade -y
-apt install bmon -y
-apt dist-upgrade -y
-systemctl enable chronyd
-systemctl restart chronyd
-systemctl enable chrony
-systemctl restart chrony
-chronyc sourcestats -v
-chronyc tracking -v
-apt install ntpdate -y
-ntpdate pool.ntp.org
-apt install sudo -y
-sudo apt-get clean all
-sudo apt-get autoremove -y
-sudo apt-get install -y debconf-utils
-sudo apt-get remove --purge exim4 -y
-sudo apt-get remove --purge ufw firewalld -y
-sudo apt-get install -y --no-install-recommends software-properties-common
-echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
-echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
-sudo apt-get install -y speedtest-cli vnstat libnss3-dev libnspr4-dev pkg-config libpam0g-dev libcap-ng-dev libcap-ng-utils libselinux1-dev libcurl4-nss-dev flex bison make libnss3-tools libevent-dev bc rsyslog dos2unix zlib1g-dev libssl-dev libsqlite3-dev sed dirmngr libxml-parser-perl build-essential gcc g++ python htop lsof tar wget curl ruby zip unzip p7zip-full python3-pip libc6 util-linux build-essential msmtp-mta ca-certificates bsd-mailx iptables iptables-persistent netfilter-persistent net-tools openssl ca-certificates gnupg gnupg2 ca-certificates lsb-release gcc shc make cmake git screen socat xz-utils apt-transport-https gnupg1 dnsutils cron bash-completion ntpdate chrony jq openvpn easy-rsa
-print_success "Packet Yang Dibutuhkan"
+    clear
+    echo -e "\033[1;32m[INFO]\033[0m Menginstall Paket yang Dibutuhkan..."
+    
+    # restart 
+    restart_paket() {
+        # Konfigurasi tambahan
+    systemctl enable chronyd
+    systemctl restart chronyd
+    systemctl enable chrony
+    systemctl restart chrony
+    chronyc sourcestats -v
+    chronyc tracking -v
+    ntpdate pool.ntp.org
+    sudo apt-get clean all
+    sudo apt-get autoremove -y
+    }
+
+   
+    # Periksa OS dan versi
+    OS=$(lsb_release -is)
+    VERSION=$(lsb_release -rs | cut -d. -f1)
+
+    # Paket khusus berdasarkan versi OS
+    if [[ "$OS" == "Debian" ]]; then
+        case $VERSION in
+        10)
+            echo -e "\033[1;32m[INFO]\033[0m Debian 10 detected. Installing additional packages..."
+        apt install zip pwgen openssl netcat socat cron bash-completion -y
+        apt install figlet -y
+        apt update -y
+        apt upgrade -y
+        apt install bmon -y
+        apt dist-upgrade -y
+        systemctl enable chronyd
+        systemctl restart chronyd
+        systemctl enable chrony
+        systemctl restart chrony
+        chronyc sourcestats -v
+        chronyc tracking -v
+        apt install ntpdate -y
+        ntpdate pool.ntp.org
+        apt install sudo -y
+        sudo apt-get clean all
+        sudo apt-get autoremove -y
+        sudo apt-get install -y debconf-utils
+        sudo apt-get remove --purge exim4 -y
+        sudo apt-get remove --purge ufw firewalld -y
+        sudo apt-get install -y --no-install-recommends software-properties-common
+        echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
+        echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
+        sudo apt-get install -y speedtest-cli vnstat libnss3-dev libnspr4-dev pkg-config libpam0g-dev libcap-ng-dev libcap-ng-utils libselinux1-dev libcurl4-nss-dev flex bison make libnss3-tools libevent-dev bc rsyslog dos2unix zlib1g-dev libssl-dev libsqlite3-dev sed dirmngr libxml-parser-perl build-essential gcc g++ python htop lsof tar wget curl ruby zip unzip p7zip-full python3-pip libc6 util-linux build-essential msmtp-mta ca-certificates bsd-mailx iptables iptables-persistent netfilter-persistent net-tools openssl ca-certificates gnupg gnupg2 ca-certificates lsb-release gcc shc make cmake git screen socat xz-utils apt-transport-https gnupg1 dnsutils cron bash-completion ntpdate chrony jq openvpn easy-rsa
+        restart_paket
+            ;;
+        11)
+            echo -e "\033[1;32m[INFO]\033[0m Debian 11 detected. Installing additional packages..."
+        apt install -y python-is-python3
+        apt install zip pwgen openssl netcat socat cron bash-completion -y
+        apt install figlet -y
+        apt update -y
+        apt upgrade -y
+        apt install bmon -y
+        apt dist-upgrade -y
+        systemctl enable chronyd
+        systemctl restart chronyd
+        systemctl enable chrony
+        systemctl restart chrony
+        chronyc sourcestats -v
+        chronyc tracking -v
+        apt install ntpdate -y
+        ntpdate pool.ntp.org
+        apt install sudo -y
+        sudo apt-get clean all
+        sudo apt-get autoremove -y
+        sudo apt-get install -y debconf-utils
+        sudo apt-get remove --purge exim4 -y
+        sudo apt-get remove --purge ufw firewalld -y
+        sudo apt-get install -y --no-install-recommends software-properties-common
+        echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
+        echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
+        sudo apt-get install -y speedtest-cli vnstat libnss3-dev libnspr4-dev pkg-config libpam0g-dev libcap-ng-dev libcap-ng-utils libselinux1-dev libcurl4-nss-dev flex bison make libnss3-tools libevent-dev bc rsyslog dos2unix zlib1g-dev libssl-dev libsqlite3-dev sed dirmngr libxml-parser-perl build-essential gcc g++ python htop lsof tar wget curl ruby zip unzip p7zip-full python3-pip libc6 util-linux build-essential msmtp-mta ca-certificates bsd-mailx iptables iptables-persistent netfilter-persistent net-tools openssl ca-certificates gnupg gnupg2 ca-certificates lsb-release gcc shc make cmake git screen socat xz-utils apt-transport-https gnupg1 dnsutils cron bash-completion ntpdate chrony jq openvpn easy-rsa            
+        
+        restart_paket
+            ;;
+        12)
+            echo -e "\033[1;32m[INFO]\033[0m Debian 12 detected. Installing additional packages..."
+            apt install -y python3-venv
+            ;;
+        esac
+    elif [[ "$OS" == "Ubuntu" ]]; then
+        case $VERSION in
+        20)
+            echo -e "\033[1;32m[INFO]\033[0m Ubuntu 20.04 detected. Installing additional packages..."
+        apt install zip pwgen openssl netcat socat cron bash-completion -y
+        apt install figlet -y
+        apt update -y
+        apt upgrade -y
+        apt install bmon -y
+        apt dist-upgrade -y
+        systemctl enable chronyd
+        systemctl restart chronyd
+        systemctl enable chrony
+        systemctl restart chrony
+        chronyc sourcestats -v
+        chronyc tracking -v
+        apt install ntpdate -y
+        ntpdate pool.ntp.org
+        apt install sudo -y
+        sudo apt-get clean all
+        sudo apt-get autoremove -y
+        sudo apt-get install -y debconf-utils
+        sudo apt-get remove --purge exim4 -y
+        sudo apt-get remove --purge ufw firewalld -y
+        sudo apt-get install -y --no-install-recommends software-properties-common
+        echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
+        echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
+        sudo apt-get install -y speedtest-cli vnstat libnss3-dev libnspr4-dev pkg-config libpam0g-dev libcap-ng-dev libcap-ng-utils libselinux1-dev libcurl4-nss-dev flex bison make libnss3-tools libevent-dev bc rsyslog dos2unix zlib1g-dev libssl-dev libsqlite3-dev sed dirmngr libxml-parser-perl build-essential gcc g++ python htop lsof tar wget curl ruby zip unzip p7zip-full python3-pip libc6 util-linux build-essential msmtp-mta ca-certificates bsd-mailx iptables iptables-persistent netfilter-persistent net-tools openssl ca-certificates gnupg gnupg2 ca-certificates lsb-release gcc shc make cmake git screen socat xz-utils apt-transport-https gnupg1 dnsutils cron bash-completion ntpdate chrony jq openvpn easy-rsa            
+        restart_paket
+            ;;
+        22)
+            echo -e "\033[1;32m[INFO]\033[0m Ubuntu 22.04 detected. Installing additional packages..."
+        apt update -y
+        apt upgrade -y        
+        apt install -y zip pwgen openssl netcat socat cron bash-completion \
+        figlet bmon ntpdate sudo debconf-utils iptables-persistent \
+        speedtest-cli vnstat libnss3-dev libnspr4-dev pkg-config libpam0g-dev \
+        libcap-ng-dev libcap-ng-utils libselinux1-dev libcurl4-nss-dev \
+        flex bison make libnss3-tools libevent-dev bc rsyslog dos2unix \
+        zlib1g-dev libssl-dev libsqlite3-dev sed dirmngr libxml-parser-perl \
+        build-essential gcc g++ python htop lsof sudo tar wget curl ruby zip unzip \
+        p7zip-full python3-pip libc6 util-linux msmtp-mta ca-certificates \
+        bsd-mailx iptables iptables-persistent netfilter-persistent net-tools \
+        openssl gnupg gnupg2 python3-venv lsb-release shc make cmake git screen socat \
+        xz-utils apt-transport-https gnupg1 dnsutils ntpdate chrony jq \
+        openvpn easy-rsa
+        sudo apt-get install -y --no-install-recommends software-properties-common
+        
+        # echo iptables
+        echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
+        echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
+        
+        # paket restart
+        restart_paket
+            ;;
+        24)
+            echo -e "\033[1;32m[INFO]\033[0m Ubuntu 24.04 detected. Installing additional packages..."
+                # Dependencies ubuntu 20.04
+    apt update -y
+    apt install -y zip pwgen openssl netcat socat cron bash-completion \
+        figlet bmon ntpdate sudo debconf-utils iptables-persistent \
+        speedtest-cli vnstat libnss3-dev libnspr4-dev pkg-config libpam0g-dev \
+        libcap-ng-dev libcap-ng-utils libselinux1-dev libcurl4-nss-dev \
+        flex bison make libnss3-tools libevent-dev bc rsyslog dos2unix \
+        zlib1g-dev libssl-dev libsqlite3-dev sed dirmngr libxml-parser-perl \
+        build-essential gcc g++ python htop lsof sudo tar wget curl ruby zip unzip \
+        p7zip-full python3-pip libc6 util-linux msmtp-mta ca-certificates \
+        bsd-mailx iptables iptables-persistent netfilter-persistent net-tools \
+        openssl gnupg gnupg2 lsb-release shc make cmake git screen socat \
+        xz-utils apt-transport-https gnupg1 dnsutils ntpdate chrony jq \
+        openvpn easy-rsa
+        sudo apt-get install -y --no-install-recommends software-properties-common
+        
+        # echo iptables
+        echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
+        echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
+        
+        # paket restart
+        restart_paket        
+            ;;
+        esac
+    else
+        echo -e "\033[1;31m[ERROR]\033[0m Unsupported OS: $OS $VERSION"
+        exit 1
+    fi
+
+    # print sukses
+    echo -e "\033[1;32m[INFO]\033[0m Semua paket yang dibutuhkan telah diinstal."
 }
+
+
 clear
 restart_system() {
 USRSC=$(wget -qO- https://raw.githubusercontent.com/scriptsvpnlt/vps_access/main/ip | grep $ipsaya | awk '{print $2}')
@@ -299,7 +538,6 @@ function make_folder_xray() {
 rm -rf /etc/lunatic/vmess/.vmess.db
 rm -rf /etc/lunatic/vless/.vless.db
 rm -rf /etc/lunatic/trojan/.trojan.db
-rm -rf /etc/lunatic/shadowsocks/.shadowsocks.db
 rm -rf /etc/lunatic/ssh/.ssh.db
 rm -rf /etc/lunatic/bot/.bot.db
 
@@ -312,13 +550,10 @@ mkdir -p /etc/lunatic/ssh/ip
 mkdir -p /etc/lunatic/vmess/detail
 mkdir -p /etc/lunatic/vless/detail
 mkdir -p /etc/lunatic/trojan/detail
-mkdir -p /etc/lunatic/shadowsocks/detail
 mkdir -p /etc/lunatic/ssh/detail
-mkdir -p /etc/lunatic/noobzvpns/detail
 
 mkdir -p /etc/lunatic/vmess/usage
 mkdir -p /etc/lunatic/vless/usage
-mkdir -p /etc/lunatic/shadowsocks/usage
 mkdir -p /etc/lunatic/trojan/usage
 mkdir -p /etc/lunatic/bot
 mkdir -p /etc/lunatic/bot/notif
@@ -334,7 +569,6 @@ touch /var/log/xray/error.log
 touch /etc/lunatic/vmess/.vmess.db
 touch /etc/lunatic/vless/.vless.db
 touch /etc/lunatic/trojan/.trojan.db
-touch /etc/lunatic/shadowsocks/.shadowsocks.db
 touch /etc/lunatic/ssh/.ssh.db
 touch /etc/lunatic/bot/.bot.db
 touch /etc/lunatic/bot/notif/key
@@ -342,9 +576,7 @@ touch /etc/lunatic/bot/notif/id
 echo "& plughin Account" >>/etc/lunatic/vmess/.vmess.db
 echo "& plughin Account" >>/etc/lunatic/vless/.vless.db
 echo "& plughin Account" >>/etc/lunatic/trojan/.trojan.db
-echo "& plughin Account" >>/etc/lunatic/shadowsocks/.shadowsocks.db
 echo "& plughin Account" >>/etc/lunatic/ssh/.ssh.db
-echo "& plughin Account" >>/etc/lunatic/noobzvpns/.noobzvpns.db
 }
 function install_xray() {
 clear
