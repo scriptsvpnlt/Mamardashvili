@@ -489,7 +489,10 @@ install_sslcert() {
     # Membersihkan file SSL lama
     echo "Menghapus file SSL lama..."
     rm -f /etc/xray/xray.key /etc/xray/xray.crt
-
+    
+    # install socat
+    sudo apt install socat
+    
     # Mendapatkan domain dari file
     local domain
     domain=$(cat /etc/xray/domain)
@@ -848,9 +851,6 @@ install_sshd() {
         exit 1
     fi
 
-    # Memeriksa status SSH service
-    log_message "Checking SSH service status"
-    /etc/init.d/ssh status
 }
 
 # Fungsi untuk mengunduh dan mengonfigurasi Dropbear
@@ -878,14 +878,6 @@ install_dropbear() {
     chmod +x /etc/default/dropbear
     if [[ $? -ne 0 ]]; then
         log_message "Error: Failed to set permissions for Dropbear configuration file."
-        exit 1
-    fi
-
-    # Restart Dropbear service
-    log_message "Restarting Dropbear service"
-    systemctl restart dropbear
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to restart Dropbear service."
         exit 1
     fi
 }
@@ -1628,7 +1620,7 @@ enable_services() {
     systemctl enable --now netfilter-persistent && log_message "netfilter-persistent enabled" || log_message "Failed to enable netfilter-persistent"
     
     # Restart specific services
-    for service in nginx xray haproxy lock-vme lock-vle lock-ssr lock-ssh lock-tro kill-vme kill-vle kill-ssr kill-ssh kill-tro; do
+    for service in nginx xray haproxy lock-vme lock-vle lock-ssr lock-ssh lock-tro kill-vme kill-vle kill-ssr dropbear nginx  kill-ssh kill-tro; do
         start_service "$service"
     done
 
