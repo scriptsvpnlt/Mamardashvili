@@ -379,11 +379,14 @@ nginx_install() {
 }
 
 base_package() {
-    # Mengaktifkan pengaturan untuk menghentikan eksekusi jika ada kesalahan
-    set -e
-
     # Menampilkan pesan sebelum memulai proses
     echo "Memulai pembaruan dan instalasi paket dasar..."
+
+    # Mendeteksi OS yang digunakan
+    OS_NAME=$(lsb_release -si)
+    OS_VERSION=$(lsb_release -sr)
+
+    echo "Deteksi sistem: $OS_NAME $OS_VERSION"
 
     # Daftar paket dasar yang diperlukan
     local packages=(
@@ -400,7 +403,16 @@ base_package() {
         easy-rsa
     )
 
-    # Menginstal paket dasar
+    # Cek jika OS adalah Debian atau Ubuntu
+    if [[ "$OS_NAME" == "Debian" || "$OS_NAME" == "Ubuntu" ]]; then
+        echo "Mengupdate dan mengupgrade sistem..."
+        apt update -y && apt upgrade -y
+    else
+        echo "Distribusi ini tidak didukung. Hanya Debian dan Ubuntu yang didukung."
+        exit 1
+    fi
+
+    # Instalasi paket dasar
     echo "Menginstal paket-paket dasar..."
     apt install -y "${packages[@]}"
 
@@ -412,7 +424,7 @@ base_package() {
     echo "Menghapus paket yang tidak diperlukan..."
     apt autoremove -y
 
-    # Menghapus layanan yang tidak diperlukan
+    # Menghapus layanan yang tidak diperlukan (seperti exim4 dan firewall)
     echo "Menghapus layanan yang tidak diperlukan..."
     apt remove --purge exim4 ufw firewalld -y
 
@@ -423,12 +435,24 @@ base_package() {
 
     # Mengaktifkan dan memulai layanan waktu (chrony dan NTP)
     echo "Mengaktifkan dan memulai layanan waktu..."
-    systemctl enable chronyd
-    systemctl restart chronyd
-    systemctl enable chrony
-    systemctl restart chrony
-    chronyc sourcestats -v
-    chronyc tracking -v
+    if [[ "$OS_NAME" == "Debian" && "$OS_VERSION" == "10" ]]; then
+        echo "Menggunakan NTPdate untuk Debian 10..."
+        systemctl stop ntp
+        systemctl disable ntp
+        ntpdate pool.ntp.org
+    elif [[ "$OS_NAME" == "Ubuntu" && "$OS_VERSION" == "20.04" ]]; then
+        echo "Menggunakan NTPdate untuk Ubuntu 20.04..."
+        systemctl stop ntp
+        systemctl disable ntp
+        ntpdate pool.ntp.org
+    elif [[ "$OS_NAME" == "Debian" && "$OS_VERSION" == "11" || "$OS_NAME" == "Debian" && "$OS_VERSION" == "12" || "$OS_NAME" == "Ubuntu" && "$OS_VERSION" == "22.04" || "$OS_NAME" == "Ubuntu" && "$OS_VERSION" == "24.04" ]]; then
+        echo "Menggunakan chrony untuk sistem lebih baru (Debian 11/12, Ubuntu 22.04/24.04)..."
+        systemctl enable chrony
+        systemctl restart chrony
+    else
+        echo "Versi sistem tidak dikenal, melakukan sinkronisasi waktu secara manual."
+        ntpdate pool.ntp.org
+    fi
 
     # Menyinkronkan waktu dengan NTP server
     echo "Menyinkronkan waktu dengan server NTP..."
@@ -437,6 +461,7 @@ base_package() {
     # Menampilkan pesan selesai
     echo "Instalasi dan konfigurasi selesai."
 }
+
 
 restart_system() {
 USRSC=$(wget -qO- https://raw.githubusercontent.com/${GIT_USER}/vps_access/main/ip | grep $IP_VPS | awk '{print $2}')
@@ -461,9 +486,6 @@ curl -s --max-time $TIMES -d "chat_id=$CHATID&disable_web_page_preview=1&text=$T
 
 # Fungsi untuk memasang SSL menggunakan acme.sh
 install_sslcert() {
-    # Mengaktifkan pengaturan untuk menghentikan eksekusi jika ada kesalahan
-    set -e
-
     # Membersihkan file SSL lama
     echo "Menghapus file SSL lama..."
     rm -f /etc/xray/xray.key /etc/xray/xray.crt
