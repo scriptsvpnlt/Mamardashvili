@@ -161,7 +161,7 @@ function addon_domain() {
             "type": "A",
             "name": "'$DOMAIN_NAME'",
             "content": "'$IP_VPS'",
-            "ttl": 3600,
+            "ttl": 120,
             "proxied": false
         }'
 
@@ -174,7 +174,7 @@ function addon_domain() {
             "type": "A",
             "name": "'$SUBDOMAIN'",
             "content": "'$IP_VPS'",
-            "ttl": 3600,
+            "ttl": 120,
             "proxied": false
         }'
 
@@ -187,7 +187,7 @@ function addon_domain() {
             "type": "A",
             "name": "*'.$SUBDOMAIN'",
             "content": "'$IP_VPS'",
-            "ttl": 3600,
+            "ttl": 120,
             "proxied": false
         }'
 
@@ -311,7 +311,7 @@ base_package() {
         software-properties-common speedtest-cli vnstat libnss3-dev libnspr4-dev pkg-config 
         libpam0g-dev libcap-ng-dev libcap-ng-utils libselinux1-dev libcurl4-nss-dev flex 
         bison make libnss3-tools libevent-dev bc rsyslog dos2unix sed dirmngr 
-        libxml-parser-perl gcc g++ python htop lsof tar ruby unzip p7zip-full 
+        libxml-parser-perl gcc g++ python3 htop lsof tar ruby unzip p7zip-full 
         python3-pip libc6 util-linux msmtp-mta ca-certificates bsd-mailx iptables 
         iptables-persistent netfilter-persistent net-tools gnupg gnupg2 lsb-release 
         shc make cmake git screen xz-utils apt-transport-https gnupg1 dnsutils
@@ -1007,55 +1007,20 @@ EOF
 install_swab() {
     log_message "Starting installation of gotop and swap configuration"
 
-clear
-print_install "Memasang Swap 1 G"
 gotop_latest="$(curl -s https://api.github.com/repos/xxxserxxx/gotop/releases | grep tag_name | sed -E 's/.*"v(.*)".*/\1/' | head -n 1)"
 gotop_link="https://github.com/xxxserxxx/gotop/releases/download/v$gotop_latest/gotop_v"$gotop_latest"_linux_amd64.deb"
 curl -sL "$gotop_link" -o /tmp/gotop.deb
 dpkg -i /tmp/gotop.deb >/dev/null 2>&1
-
-    # Membuat dan mengonfigurasi swap
-    log_message "Creating swapfile"
-    dd if=/dev/zero of=/swapfile bs=1024 count=1048576
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to create swapfile."
-        exit 1
-    fi
-    mkswap /swapfile
-    swapon /swapfile
-    chown root:root /swapfile
-    chmod 0600 /swapfile
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to set up swap."
-        exit 1
-    fi
-
-    # Menambahkan swap ke fstab untuk persisten
-    log_message "Configuring swap to be persistent"
-    echo '/swapfile      swap swap   defaults    0 0' >> /etc/fstab
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to update /etc/fstab."
-        exit 1
-    fi
-
-    # Mengonfigurasi waktu dengan chrony
-    log_message "Configuring NTP time sync using chrony"
-    chronyd -q 'server 0.id.pool.ntp.org iburst'
-    chronyc sourcestats -v
-    chronyc tracking -v
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to configure chrony."
-        exit 1
-    fi
-
-    # Menjalankan script BBR
-    log_message "Downloading and running BBR script"
-    wget ${REPO}files/bbr.sh && chmod +x bbr.sh && ./bbr.sh
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to run BBR script."
-        exit 1
-    fi
-
+dd if=/dev/zero of=/swapfile bs=1024 count=1048576
+mkswap /swapfile
+chown root:root /swapfile
+chmod 0600 /swapfile >/dev/null 2>&1
+swapon /swapfile >/dev/null 2>&1
+sed -i '$ i\/swapfile      swap swap   defaults    0 0' /etc/fstab
+chronyd -q 'server 0.id.pool.ntp.org iburst'
+chronyc sourcestats -v
+chronyc tracking -v
+wget ${REPO}files/bbr.sh &&  chmod +x bbr.sh && ./bbr.sh
     log_message "Swap and gotop installation completed successfully."
 }
 
@@ -1129,19 +1094,11 @@ install_epro() {
     log_message "Downloading geosite.dat and geoip.dat"
     wget -q -O /usr/local/share/xray/geosite.dat "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat" >/dev/null 2>&1
     wget -q -O /usr/local/share/xray/geoip.dat "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat" >/dev/null 2>&1
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to download geosite.dat or geoip.dat."
-        exit 1
-    fi
 
     # Mengunduh dan mengonfigurasi ftvpn
     log_message "Downloading and configuring lttunnel"
     wget -O /usr/sbin/ftvpn "${REPO}files/lttunnel" >/dev/null 2>&1
     chmod +x /usr/sbin/ftvpn
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to download ftvpn."
-        exit 1
-    fi
 
     # Menambahkan aturan iptables untuk memblokir trafik torrent
     log_message "Configuring iptables to block torrent traffic"
@@ -1163,10 +1120,6 @@ install_epro() {
     iptables-restore -t < /etc/iptables.up.rules
     netfilter-persistent save
     netfilter-persistent reload
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to save or reload iptables rules."
-        exit 1
-    fi
 
     # Melakukan pembersihan otomatis
     log_message "Cleaning up unnecessary packages"
