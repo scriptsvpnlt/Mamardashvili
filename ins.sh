@@ -32,13 +32,9 @@ clear
     echo -e "\e[32;1m install jq,curl,wget succes.. \e[0m" 
 }
 
-function main_up() {
 update_and_upgrade
 install_curl_jq
-clear
-}
 
-main_up
 
 log_message() {
     local message=$1
@@ -67,16 +63,11 @@ get_public_ip() {
     export IP=$(curl -sS icanhazip.com)
     log_message "Public IP obtained: $IP"
 }
-function checking_rooted() {
 # Clear screen dan melakukan pemeriksaan
 clear
 get_public_ip
 check_root_user
 check_openvz_support
-clear
-}
-
-checking_rooted
 
 # Fungsi untuk menampilkan pesan log dengan timestamp
 log_message() {
@@ -228,10 +219,8 @@ echo "IP=$SUBDOMAIN.$DOMAIN_NAME" > /var/lib/LT/ipvps.conf
 echo "IP=" > /var/lib/LT/ipvps.conf
 # Menyimpan wildcard ke /etc/xray/wildcard
 echo "*.$DOMAIN_NAME" > /etc/xray/wildcard
-
 }
 addon_domain
-
 clear
 
 # data Telegram
@@ -275,6 +264,7 @@ datediff() {
 # Call the datediff function to calculate expiry
 datediff "$exp" "$DATE"
 
+function gasgas() {
 # Status Check
 Exp1=$(curl https://raw.githubusercontent.com/${GIT_USER}/vps_access/main/ip | grep $IP_VPS | awk '{print $4}')
 if [[ $(date -d "$today" +%s) -lt $(date -d "$Exp1" +%s) ]]; then
@@ -308,6 +298,9 @@ export OS_Name=$( cat /etc/os-release | grep -w PRETTY_NAME | head -n1 | sed 's/
 export Kernel=$( uname -r )
 export Arch=$( uname -m )
 export IP=$( curl -s https://ipinfo.io/ip/ )
+}
+
+gasgas
 
 # Fungsi untuk mencetak pesan dengan format tertentu
 print_message() {
@@ -472,8 +465,6 @@ TEXT="
 "'&reply_markup={"inline_keyboard":[[{"text":"⭐ᴏʀᴅᴇʀ⭐","url":"https://t.me/ian_khvicha"},{"text":"⭐ɪɴꜱᴛᴀʟʟ⭐","url":"https://wa.me/6283189774145"}]]}'
 curl -s --max-time $TIMES -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
 }
-clear
-#!/bin/bash
 
 # Fungsi untuk memasang SSL menggunakan acme.sh
 install_sslcert() {
@@ -740,6 +731,7 @@ sed -i '$ i\echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6' /etc/rc.local
 ln -fs /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
 sed -i 's/AcceptEnv/#AcceptEnv/g' /etc/ssh/sshd_config
 }
+
 function install_badvpn(){
 # Fungsi untuk mengunduh dan mengonfigurasi file
 download_and_configure() {
@@ -828,8 +820,6 @@ print_message "UDP Mini setup completed successfully."
 
 }
 
-#!/bin/bash
-
 # Fungsi untuk mencetak pesan log
 log_message() {
     local message=$1
@@ -909,8 +899,6 @@ install_dropbear() {
     log_message "Checking Dropbear service status"
     /etc/init.d/dropbear status
 }
-
-#!/bin/bash
 
 # Fungsi untuk mencetak pesan log
 log_message() {
@@ -1040,9 +1028,6 @@ install_openvpn() {
 
     log_message "OpenVPN installation completed successfully."
 }
-
-
-#!/bin/bash
 
 # Fungsi untuk mencetak pesan log
 log_message() {
@@ -1260,8 +1245,6 @@ install_Fail2ban() {
     log_message "Fail2ban installation and configuration completed successfully."
 }
 
-#!/bin/bash
-
 # Fungsi untuk mencetak pesan log
 log_message() {
     local message=$1
@@ -1359,8 +1342,6 @@ install_epro() {
     log_message "Epro installation and configuration completed successfully."
 }
 
-#!/bin/bash
-
 # Fungsi untuk mencetak pesan log
 log_message() {
     local message=$1
@@ -1423,8 +1404,6 @@ restart_services() {
     log_message "All services restarted and unnecessary files cleaned up successfully."
 }
 
-#!/bin/bash
-
 # Fungsi untuk mencetak pesan log
 log_message() {
     local message=$1
@@ -1481,8 +1460,6 @@ install_menu() {
 
     log_message "Menu installation completed successfully."
 }
-
-#!/bin/bash
 
 # Fungsi untuk mencetak pesan log
 log_message() {
@@ -1626,8 +1603,6 @@ configure_system() {
 }
 
 
-service cron restart
-
 function install_udp() {
 cd
 rm -rf /root/udp
@@ -1684,7 +1659,6 @@ echo enable service udp-custom
 systemctl enable udp-custom &>/dev/null
 clear
 }
-#!/bin/bash
 
 # Fungsi untuk menampilkan pesan log dengan timestamp
 log_message() {
@@ -1704,7 +1678,7 @@ enable_services() {
 
     # Reload daemon
     systemctl daemon-reload && log_message "Systemd daemon reloaded successfully" || log_message "Failed to reload systemd daemon"
-
+    service cron restart
     # Start and enable services
     systemctl start netfilter-persistent && log_message "netfilter-persistent started" || log_message "Failed to start netfilter-persistent"
     systemctl enable --now rc-local && log_message "rc-local enabled and started" || log_message "Failed to enable rc-local"
