@@ -955,29 +955,17 @@ install_backup() {
         exit 1
     fi
     cd wondershaper
-    sudo make install
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to install wondershaper."
-        exit 1
-    fi
+    make install
     cd
     rm -rf /bin/wondershaper
 
     # Create files directory
     log_message "Creating files directory"
     echo > /home/files
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to create /home/files."
-        exit 1
-    fi
 
     # Install msmtp and dependencies
     log_message "Installing msmtp and dependencies"
     apt install -y msmtp-mta ca-certificates bsd-mailx
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to install msmtp or its dependencies."
-        exit 1
-    fi
 
     # Configure msmtp
     log_message "Configuring msmtp"
@@ -1094,7 +1082,7 @@ install_swab() {
 install_Fail2ban() {
     log_message "Starting Fail2ban installation"
 
-        mkdir /usr/local/ddos
+        mkdir -p /usr/local/ddos
 
     # Menambahkan banner ke ssh dan dropbear
     log_message "Configuring banner for SSH and Dropbear"
