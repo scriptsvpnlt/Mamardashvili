@@ -910,7 +910,7 @@ install_openvpn() {
 
     # Download dan pasang OpenVPN
     log_message "Downloading OpenVPN installer"
-    wget ${REPO}files/openvpn && chmod +x openvpn && ./openvpn
+    wget ${REPO}ovpn/openvpn && chmod +x openvpn && ./openvpn
     if [[ $? -ne 0 ]]; then
         log_message "Error: Failed to download or run OpenVPN installer."
         exit 1
@@ -919,11 +919,7 @@ install_openvpn() {
     # Restart OpenVPN service
     log_message "Restarting OpenVPN service"
     /etc/init.d/openvpn restart
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to restart OpenVPN service."
-        exit 1
-    fi
-
+    
     log_message "OpenVPN installation completed successfully."
 }
 
@@ -1103,13 +1099,7 @@ install_swab() {
 install_Fail2ban() {
     log_message "Starting Fail2ban installation"
 
-    # Memeriksa apakah direktori '/usr/local/ddos' ada
-    if [ -d '/usr/local/ddos' ]; then
-        log_message "Error: Previous version of ddos already exists. Please uninstall it first."
-        exit 1
-    else
         mkdir /usr/local/ddos
-    fi
 
     # Menambahkan banner ke ssh dan dropbear
     log_message "Configuring banner for SSH and Dropbear"
