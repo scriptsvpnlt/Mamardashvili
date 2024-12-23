@@ -1209,7 +1209,6 @@ restart_services() {
         "vnstat"
         "haproxy"
         "cron"
-        "netfilter-persistent"
         "xray"
         "rc-local"
         "ws"
