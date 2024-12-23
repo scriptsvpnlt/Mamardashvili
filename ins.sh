@@ -109,8 +109,6 @@ function main() {
 main
 
 
-
-
 Ip_Vps=$(curl -sS ipv4.icanhazip.com)
 clear
 export IP=$( curl -sS icanhazip.com )
@@ -220,6 +218,112 @@ export IP=$( curl -s https://ipinfo.io/ip/ )
 
 
 function first_setup() {
+mkdir -p /etc/haproxy
+
+cat >/etc/haproxy/haproxy.cfg <<-END
+global       
+    stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
+    stats timeout 1d
+    
+    tune.h2.initial-window-size 2147483647
+    tune.ssl.default-dh-param 2048
+
+    pidfile /run/haproxy.pid
+    chroot /var/lib/haproxy
+
+    user haproxy
+    group haproxy
+    daemon
+
+    ssl-default-bind-ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
+    ssl-default-bind-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+    ssl-default-bind-options no-sslv3 no-tlsv10 no-tlsv11
+
+    ca-base /etc/ssl/certs
+    crt-base /etc/ssl/private
+
+defaults
+    log global
+    mode tcp
+    option dontlognull
+    timeout connect 200ms
+    timeout client  300s
+    timeout server  300s
+    
+frontend multiport
+    mode tcp
+    bind-process 1 2
+    bind *:222-1000 tfo
+    tcp-request inspect-delay 500ms
+    tcp-request content accept if HTTP
+    tcp-request content accept if { req.ssl_hello_type 1 }
+    use_backend recir_http if HTTP 
+    default_backend recir_https
+
+frontend multiports
+    mode tcp
+    bind abns@haproxy-http accept-proxy tfo
+    default_backend recir_https_www
+
+frontend ssl
+    mode tcp
+    bind-process 1
+    bind *:80 tfo
+    bind *:55 tfo
+    bind *:8080 tfo 
+    bind *:8880 tfo
+    bind *:2095 tfo
+    bind *:2082 tfo
+    bind *:2086 tfo
+    bind *:2095 tfo
+    bind abns@haproxy-https accept-proxy ssl crt /etc/haproxy/hap.pem alpn h2,http/1.1 tfo
+    
+    tcp-request inspect-delay 500ms
+    tcp-request content capture req.ssl_sni len 100
+    tcp-request content accept if { req.ssl_hello_type 1 }
+
+    acl chk-02_up hdr(Connection) -i upgrade
+    acl chk-02_ws hdr(Upgrade) -i websocket
+    acl this_payload payload(0,7) -m bin 5353482d322e30
+    acl up-to ssl_fc_alpn -i h2
+
+    use_backend GRUP_FTVPN if up-to
+    use_backend FTVPN if chk-02_up chk-02_ws 
+    use_backend FTVPN if { path_reg -i ^\/(.*) }
+    use_backend BOT_FTVPN if this_payload
+    default_backend CHANNEL_FTVPN
+
+backend recir_https_www
+    mode tcp
+    server misssv-bau 127.0.0.1:2223 check
+     
+backend FTVPN
+    mode http
+    server hencet-bau 127.0.0.1:1010 send-proxy check 
+
+backend GRUP_FTVPN
+    mode tcp
+    server hencet-baus 127.0.0.1:1013 send-proxy check
+    
+backend CHANNEL_FTVPN
+    mode tcp
+    balance roundrobin
+    server nonok-bau 127.0.0.1:1194 check
+    server memek-bau 127.0.0.1:1012 send-proxy check
+
+backend BOT_FTVPN
+    mode tcp
+    server misv-bau 127.0.0.1:2222 check
+    
+backend recir_http
+    mode tcp
+    server loopback-for-http abns@haproxy-http send-proxy-v2 check
+    
+backend recir_https
+    mode tcp
+    server loopback-for-https abns@haproxy-https send-proxy-v2 check
+END
+    
     # Atur zona waktu
     timedatectl set-timezone Asia/Jakarta
 
@@ -235,7 +339,14 @@ function first_setup() {
     # Identifikasi OS dan versinya
     OS=$(grep -w ID /etc/os-release | cut -d= -f2 | tr -d '"')
     VERSION=$(grep -w VERSION_ID /etc/os-release | cut -d= -f2 | tr -d '"')
+    
+    # versi haproxy ubuntu 24.04 ( nooble )
+    # versi haproxy ubuntu 22.04
+    NobleVersi="2.9"
 
+    # versi haproxy ubuntu 20.04 ( focal fossa )
+    FocalVersi="2.0"
+        
     echo "Sistem Operasi terdeteksi: ${OS} ${VERSION}"
 
     # Update dan instal dependensi dasar
@@ -248,13 +359,15 @@ function first_setup() {
         case $VERSION in
         "20.04")
             echo "Menambahkan repository untuk Ubuntu 20.04..."
-            add-apt-repository ppa:vbernat/haproxy-2.0 -y
-            apt-get install haproxy=2.0.\* -y
+            add-apt-repository ppa:vbernat/haproxy-${FocalVersi} -y
+            sudo apt update
+            apt-get install haproxy=${FocalVersi}.\* -y
             ;;
         "22.04" | "24.04" | "24.04.1")
             echo "Menambahkan repository untuk Ubuntu ${VERSION}..."
-            add-apt-repository ppa:vbernat/haproxy-2.6 -y
-            apt-get install haproxy=2.6.\* -y
+            sudo add-apt-repository ppa:vbernat/haproxy-${NobleVersi} --yes
+            sudo apt update
+            apt-get install haproxy=${NobleVersi}.\* -y
             ;;
         *)
             echo -e "OS Ubuntu ${VERSION} tidak didukung."
@@ -458,7 +571,7 @@ function base_package() {
             ;;
         24)
             echo -e "\033[1;32m[INFO]\033[0m Ubuntu 24.04 detected. Installing additional packages..."
-                # Dependencies ubuntu 20.04
+                # Dependencies ubuntu 24.04
     apt update -y
     apt install -y zip pwgen openssl netcat socat cron bash-completion \
         figlet bmon ntpdate sudo debconf-utils iptables-persistent \
@@ -587,14 +700,14 @@ latest_version="$(curl -s https://api.github.com/repos/XTLS/Xray-core/releases |
 bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install -u www-data --version $latest_version
 wget -O /etc/xray/config.json "${REPO}cfg_conf_js/config.json" >/dev/null 2>&1
 wget -O /etc/systemd/system/runn.service "${REPO}files/runn.service" >/dev/null 2>&1
-domain=$(cat /etc/xray/domain)
+domain=$(cat /root/domain)
 IPVS=$(cat /etc/xray/ipvps)
 print_success "Core Xray 1.8.1 Latest Version"
 clear
 curl -s ipinfo.io/city >>/etc/xray/city
 curl -s ipinfo.io/org | cut -d " " -f 2-10 >>/etc/xray/isp
 print_install "Memasang Konfigurasi Packet"
-wget -O /etc/haproxy/haproxy.cfg "${REPO}cfg_conf_js/haproxy.cfg" >/dev/null 2>&1
+#wget -O /etc/haproxy/haproxy.cfg "${REPO}cfg_conf_js/haproxy.cfg" >/dev/null 2>&1
 wget -O /etc/nginx/conf.d/xray.conf "${REPO}cfg_conf_js/xray.conf" >/dev/null 2>&1
 sed -i "s/xxx/${domain}/g" /etc/haproxy/haproxy.cfg
 sed -i "s/xxx/${domain}/g" /etc/nginx/conf.d/xray.conf
@@ -663,7 +776,7 @@ SysVStartPriority=99
 [Install]
 WantedBy=multi-user.target
 END
-cat > /etc/rc.local <<-END
+cat > /etc/rc.local<<-END
 exit 0
 END
 chmod +x /etc/rc.local
@@ -882,7 +995,7 @@ fi
 clear
 echo "Banner /etc/banner.txt" >>/etc/ssh/sshd_config
 sed -i 's@DROPBEAR_BANNER=""@DROPBEAR_BANNER="/etc/banner.txt"@g' /etc/default/dropbear
-wget -O /etc/banner.txt "${REPO}banner/issue.net"
+wget -O /etc/banner.txt "${REPO}banner/lunatic.site"
 print_success "Fail2ban"
 }
 function ins_epro(){
@@ -1065,9 +1178,9 @@ sudo hostnamectl set-hostname $username
 }
 
 function install_scripts() {
+base_package
 first_setup
 nginx_install
-base_package
 make_folder_xray
 password_default
 pasang_ssl
