@@ -176,7 +176,7 @@ function addon_domain() {
             "name": "'$DOMAIN_NAME'",
             "content": "'$IP_VPS'",
             "ttl": 3600,
-            "proxied": true
+            "proxied": false
         }'
 
         # Menambahkan A Record untuk subdomain yang dimasukkan pengguna
@@ -189,7 +189,7 @@ function addon_domain() {
             "name": "'$SUBDOMAIN'",
             "content": "'$IP_VPS'",
             "ttl": 3600,
-            "proxied": true
+            "proxied": false
         }'
 
         # Menambahkan wildcard A Record untuk semua subdomain di bawah domain
@@ -199,10 +199,10 @@ function addon_domain() {
             -H "Content-Type: application/json" \
             --data '{
             "type": "A",
-            "name": "*",
+            "name": "*'.$SUBDOMAIN'",
             "content": "'$IP_VPS'",
             "ttl": 3600,
-            "proxied": true
+            "proxied": false
         }'
 
         # dapatkan inpo ipvps
@@ -213,7 +213,7 @@ function addon_domain() {
         echo "IP=$SUBDOMAIN.$DOMAIN_NAME" > /var/lib/LT/ipvps.conf
         echo "IP=" > /var/lib/LT/ipvps.conf
         # Menyimpan wildcard ke /etc/xray/wildcard
-        echo "*.$DOMAIN_NAME" > /etc/xray/wildcard
+        echo "bug.com.$SUBDOMAIN.$DOMAIN_NAME" > /etc/xray/wildcard
     fi
 }
 
