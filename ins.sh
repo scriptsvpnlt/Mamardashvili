@@ -530,7 +530,10 @@ install_sslcert() {
     # Menyesuaikan izin file kunci SSL
     echo "Mengatur izin file kunci SSL..."
     chmod 600 /etc/xray/xray.key
-
+     
+     # restart xray
+    systemctl restart xray
+    
     echo "Sertifikat SSL berhasil dipasang untuk domain $domain."
 }
 
@@ -1565,8 +1568,8 @@ nginx_install
 base_package
 make_folder_xray
 install_password
-install_sslcert
 install_xray
+install_sslcert
 install_ssh
 install_badvpn
 install_sshd
