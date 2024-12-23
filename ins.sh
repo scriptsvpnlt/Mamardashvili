@@ -888,10 +888,6 @@ install_dropbear() {
         log_message "Error: Failed to restart Dropbear service."
         exit 1
     fi
-
-    # Memeriksa status Dropbear service
-    log_message "Checking Dropbear service status"
-    /etc/init.d/dropbear status
 }
 
 # Fungsi untuk menginstal dan mengonfigurasi vnStat
