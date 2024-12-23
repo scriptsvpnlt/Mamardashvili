@@ -93,7 +93,7 @@ function main() {
     apt update -y && apt upgrade -y
 
     echo -e "${OK} Installing dependencies..."
-    apt install -y curl wondershaper lsb-release
+    apt install -y curl wondershaper lsb-release jq curl wget
 
     echo -e "${OK} Setting up directories..."
     chmod +x /var/log/xray
@@ -693,25 +693,260 @@ echo "& plughin Account" >>/etc/lunatic/ssh/.ssh.db
 }
 function install_xray() {
 clear
+
+# get ip and domain info
+domain=$(< /root/domain)
+IPVS=$(< /etc/xray/ipvps)
+
 print_install "Core Xray 1.8.1 Latest Version"
 domainSock_dir="/run/xray";! [ -d $domainSock_dir ] && mkdir  $domainSock_dir
 chown www-data.www-data $domainSock_dir
 latest_version="$(curl -s https://api.github.com/repos/XTLS/Xray-core/releases | grep tag_name | sed -E 's/.*"v(.*)".*/\1/' | head -n 1)"
 bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install -u www-data --version $latest_version
 wget -O /etc/xray/config.json "${REPO}cfg_conf_js/config.json" >/dev/null 2>&1
-wget -O /etc/systemd/system/runn.service "${REPO}files/runn.service" >/dev/null 2>&1
-domain=$(cat /root/domain)
-IPVS=$(cat /etc/xray/ipvps)
+wget -O /etc/systemd/system/run_xray.service "${REPO}files/run_xray.service" >/dev/null 2>&1
 print_success "Core Xray 1.8.1 Latest Version"
 clear
 curl -s ipinfo.io/city >>/etc/xray/city
 curl -s ipinfo.io/org | cut -d " " -f 2-10 >>/etc/xray/isp
-print_install "Memasang Konfigurasi Packet"
-#wget -O /etc/haproxy/haproxy.cfg "${REPO}cfg_conf_js/haproxy.cfg" >/dev/null 2>&1
-wget -O /etc/nginx/conf.d/xray.conf "${REPO}cfg_conf_js/xray.conf" >/dev/null 2>&1
+cat >/etc/nginx/conf.d/xray.conf<<-END
+server {
+    listen 1010 proxy_protocol so_keepalive=on reuseport;
+    set_real_ip_from 127.0.0.1;
+    real_ip_header  proxy_protocol;
+    server_name xxx;
+    client_body_buffer_size 200K;
+    client_header_buffer_size 2k;
+    client_max_body_size 10M;
+    large_client_header_buffers 3 1k;
+    client_header_timeout 86400000m;
+    keepalive_timeout 86400000m;
+    add_header X-HTTP-LEVEL-HEADER 1;
+    add_header X-ANOTHER-HTTP-LEVEL-HEADER 1;
+    add_header X-XSS-Protection "1; mode=block";
+
+    location ~ /vless {
+    if ($http_upgrade != "Websocket") {
+    rewrite /(.*) /vless break;
+    }
+    add_header X-HTTP-LEVEL-HEADER 1;
+    add_header X-ANOTHER-HTTP-LEVEL-HEADER 1;
+    add_header X-SERVER-LEVEL-HEADER 1;
+    add_header X-LOCATION-LEVEL-HEADER 1;
+    proxy_headers_hash_max_size 512;
+    proxy_headers_hash_bucket_size 128;
+    proxy_http_version 1.1;
+    proxy_redirect off;
+    proxy_pass http://127.0.0.1:10001;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $http_x_forwarded_for;
+    proxy_set_header X-Forwarded-For $http_x_forwarded_for;
+  }
+    location ~ /vmess {
+    if ($http_upgrade != "Websocket") {
+    rewrite /(.*) /vmess break;
+    }
+    add_header X-HTTP-LEVEL-HEADER 1;
+    add_header X-ANOTHER-HTTP-LEVEL-HEADER 1;
+    add_header X-SERVER-LEVEL-HEADER 1;
+    add_header X-LOCATION-LEVEL-HEADER 1;
+    proxy_headers_hash_max_size 512;
+    proxy_headers_hash_bucket_size 128;
+    proxy_http_version 1.1;
+    proxy_redirect off;
+    proxy_pass http://127.0.0.1:10002;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $http_x_forwarded_for;
+    proxy_set_header X-Forwarded-For $http_x_forwarded_for;
+  } 
+    location ~ /trojan-ws {
+    if ($http_upgrade != "Websocket") {
+    rewrite /(.*) /trojan-ws break;
+    }
+    add_header X-HTTP-LEVEL-HEADER 1;
+    add_header X-ANOTHER-HTTP-LEVEL-HEADER 1;
+    add_header X-SERVER-LEVEL-HEADER 1;
+    add_header X-LOCATION-LEVEL-HEADER 1;
+    proxy_headers_hash_max_size 512;
+    proxy_headers_hash_bucket_size 128;
+    proxy_http_version 1.1;
+    proxy_redirect off;
+    proxy_pass http://127.0.0.1:10003;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $http_x_forwarded_for;
+    proxy_set_header X-Forwarded-For $http_x_forwarded_for;
+  }
+    location ~ /ss-ws {
+    if ($http_upgrade != "Websocket") {
+    rewrite /(.*) /ss-ws break;
+    }
+    add_header X-HTTP-LEVEL-HEADER 1;
+    add_header X-ANOTHER-HTTP-LEVEL-HEADER 1;
+    add_header X-SERVER-LEVEL-HEADER 1;
+    add_header X-LOCATION-LEVEL-HEADER 1;
+    proxy_headers_hash_max_size 512;
+    proxy_headers_hash_bucket_size 128;
+    proxy_http_version 1.1;
+    proxy_redirect off;
+    proxy_pass http://127.0.0.1:10004;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $http_x_forwarded_for;
+    proxy_set_header X-Forwarded-For $http_x_forwarded_for;
+  }
+    location ~ / {
+    if ($http_upgrade != "Websocket") {
+    rewrite /(.*) /fightertunnelssh break;
+    }
+    add_header X-HTTP-LEVEL-HEADER 1;
+    add_header X-ANOTHER-HTTP-LEVEL-HEADER 1;
+    add_header X-SERVER-LEVEL-HEADER 1;
+    add_header X-LOCATION-LEVEL-HEADER 1;
+    proxy_headers_hash_max_size 512;
+    proxy_headers_hash_bucket_size 128;
+    proxy_http_version 1.1;
+    proxy_redirect off;
+    proxy_pass http://127.0.0.1:10015;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $http_x_forwarded_for;
+    proxy_set_header X-Forwarded-For $http_x_forwarded_for;
+  }
+}
+server {
+    listen 1012 proxy_protocol so_keepalive=on reuseport;
+    client_body_buffer_size 200K;
+    client_header_buffer_size 2k;
+    client_max_body_size 10M;
+    large_client_header_buffers 3 1k;
+    client_header_timeout 86400000m;
+    keepalive_timeout 86400000m;
+    server_name xxx;
+
+    location ~ / {
+    if ($http_upgrade != "Websocket") {
+    rewrite /(.*) /fightertunnelovpn break;
+    }
+    add_header X-HTTP-LEVEL-HEADER 1;
+    add_header X-ANOTHER-HTTP-LEVEL-HEADER 1;
+    add_header X-SERVER-LEVEL-HEADER 1;
+    add_header X-LOCATION-LEVEL-HEADER 1;
+    proxy_headers_hash_max_size 512;
+    proxy_headers_hash_bucket_size 128;
+    proxy_http_version 1.1;
+    proxy_redirect off;
+    proxy_pass http://127.0.0.1:10012;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $http_x_forwarded_for;
+    proxy_set_header X-Forwarded-For $http_x_forwarded_for;
+  }
+}
+server {
+    listen 81 ssl http2 reuseport;
+    ssl_certificate /etc/xray/xray.crt;
+    ssl_certificate_key /etc/xray/xray.key;
+    ssl_ciphers EECDH+CHACHA20:EECDH+CHACHA20-draft:EECDH+ECDSA+AES128:EECDH+aRSA+AES128:RSA+AES128:EECDH+ECDSA+AES256:EECDH+aRSA+AES256:RSA+AES256:EECDH+ECDSA+3DES:EECDH+aRSA+3DES:RSA+3DES:!MD5;
+    ssl_protocols TLSv1.1 TLSv1.2 TLSv1.3;
+    root /var/www/html;
+}
+server {
+    listen 1013 http2 proxy_protocol so_keepalive=on reuseport;
+    client_body_buffer_size 200K;
+    client_header_buffer_size 2k;
+    client_max_body_size 10M;
+    large_client_header_buffers 3 1k;
+    client_header_timeout 86400000m;
+    keepalive_timeout 86400000m;
+    server_name xxx;
+    location ~ /vless-grpc {
+    add_header X-HTTP-LEVEL-HEADER 1;
+    add_header X-ANOTHER-HTTP-LEVEL-HEADER 1;
+    add_header X-SERVER-LEVEL-HEADER 1;
+    add_header X-LOCATION-LEVEL-HEADER 1;
+    proxy_headers_hash_max_size 512;
+    proxy_headers_hash_bucket_size 128;
+    proxy_http_version 1.1;
+    proxy_redirect off;
+    grpc_set_header Host $host;
+    grpc_pass grpc://127.0.0.1:10005;
+    grpc_set_header X-Real-IP $http_x_forwarded_for;
+    grpc_set_header X-Forwarded-For $http_x_forwarded_for;
+  }
+    location ~ /vmess-grpc {
+    add_header X-HTTP-LEVEL-HEADER 1;
+    add_header X-ANOTHER-HTTP-LEVEL-HEADER 1;
+    add_header X-SERVER-LEVEL-HEADER 1;
+    add_header X-LOCATION-LEVEL-HEADER 1;
+    proxy_headers_hash_max_size 512;
+    proxy_headers_hash_bucket_size 128;
+    proxy_http_version 1.1;
+    proxy_redirect off;
+    grpc_set_header Host $host;
+    grpc_pass grpc://127.0.0.1:10006;
+    grpc_set_header X-Real-IP $http_x_forwarded_for;
+    grpc_set_header X-Forwarded-For $http_x_forwarded_for;
+  }
+    location ~ /trojan-grpc {
+    add_header X-HTTP-LEVEL-HEADER 1;
+    add_header X-ANOTHER-HTTP-LEVEL-HEADER 1;
+    add_header X-SERVER-LEVEL-HEADER 1;
+    add_header X-LOCATION-LEVEL-HEADER 1;
+    proxy_headers_hash_max_size 512;
+    proxy_headers_hash_bucket_size 128;
+    proxy_http_version 1.1;
+    proxy_redirect off;
+    grpc_set_header Host $host;
+    grpc_pass grpc://127.0.0.1:10007;
+    grpc_set_header X-Real-IP $http_x_forwarded_for;
+    grpc_set_header X-Forwarded-For $http_x_forwarded_for;
+  }
+    location ~ /ss-grpc {
+    add_header X-HTTP-LEVEL-HEADER 1;
+    add_header X-ANOTHER-HTTP-LEVEL-HEADER 1;
+    add_header X-SERVER-LEVEL-HEADER 1;
+    add_header X-LOCATION-LEVEL-HEADER 1;
+    proxy_headers_hash_max_size 512;
+    proxy_headers_hash_bucket_size 128;
+    proxy_http_version 1.1;
+    proxy_redirect off;
+    grpc_set_header Host $host;
+    grpc_pass grpc://127.0.0.1:10008;
+    grpc_set_header X-Real-IP $http_x_forwarded_for;
+    grpc_set_header X-Forwarded-For $http_x_forwarded_for;
+  }
+}
+END
 sed -i "s/xxx/${domain}/g" /etc/haproxy/haproxy.cfg
 sed -i "s/xxx/${domain}/g" /etc/nginx/conf.d/xray.conf
-curl ${REPO}cfg_conf_js/nginx.conf > /etc/nginx/nginx.conf
+
+cat >/etc/nginx/nginx.conf<<-END
+user www-data;
+worker_processes auto;
+error_log /var/log/nginx/error.log notice;
+pid /var/run/nginx.pid;
+events {
+    worker_connections 1024;
+}
+http {
+    log_format main '[$time_local] $proxy_protocol_addr "$http_user_agent"';
+    access_log /var/log/nginx/access.log main;
+    set_real_ip_from 127.0.0.1;
+
+    include /etc/nginx/mime.types;
+    include /etc/nginx/conf.d/xray.conf;
+}
+END
+
 cat /etc/xray/xray.crt /etc/xray/xray.key | tee /etc/haproxy/hap.pem
 chmod +x /etc/systemd/system/runn.service
 rm -rf /etc/systemd/system/xray.service.d
