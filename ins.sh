@@ -1007,27 +1007,12 @@ EOF
 install_swab() {
     log_message "Starting installation of gotop and swap configuration"
 
-    # Mendapatkan versi terbaru dari gotop
-    log_message "Fetching latest gotop release version"
-    gotop_latest="$(curl -s https://api.github.com/repos/xxxserxxx/gotop/releases | grep tag_name | sed -E 's/.*"v(.*)".*/\1/' | head -n 1)"
-    if [[ -z "$gotop_latest" ]]; then
-        log_message "Error: Failed to fetch latest gotop version."
-        exit 1
-    fi
-    gotop_link="https://github.com/xxxserxxx/gotop/releases/download/v$gotop_latest/gotop_v$gotop_latest_linux_amd64.deb"
-
-    # Mengunduh dan menginstal gotop
-    log_message "Downloading gotop from $gotop_link"
-    curl -sL "$gotop_link" -o /tmp/gotop.deb
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to download gotop."
-        exit 1
-    fi
-    dpkg -i /tmp/gotop.deb >/dev/null 2>&1
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to install gotop."
-        exit 1
-    fi
+clear
+print_install "Memasang Swap 1 G"
+gotop_latest="$(curl -s https://api.github.com/repos/xxxserxxx/gotop/releases | grep tag_name | sed -E 's/.*"v(.*)".*/\1/' | head -n 1)"
+gotop_link="https://github.com/xxxserxxx/gotop/releases/download/v$gotop_latest/gotop_v"$gotop_latest"_linux_amd64.deb"
+curl -sL "$gotop_link" -o /tmp/gotop.deb
+dpkg -i /tmp/gotop.deb >/dev/null 2>&1
 
     # Membuat dan mengonfigurasi swap
     log_message "Creating swapfile"
