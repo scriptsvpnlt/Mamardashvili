@@ -14,7 +14,7 @@ IP_VPS=$(curl -sS ipv4.icanhazip.com)
 # // ====================================
 
 function update_and_upgrade() {
-clear
+    clear
     # Pembaruan sistem
     echo -e "\e[36;1m UPDATE....       \e[0m"
     apt update -y
@@ -26,7 +26,7 @@ clear
 }
 
 function install_curl_jq() {
-clear
+    clear
     echo -e "\e[36;1m Install Jq,curl and wget.... \e[0m"
     apt install wget curl jq -y
     echo -e "\e[32;1m install jq,curl,wget succes.. \e[0m" 
@@ -63,17 +63,12 @@ get_public_ip() {
     export IP=$(curl -sS icanhazip.com)
     log_message "Public IP obtained: $IP"
 }
+
 # Clear screen dan melakukan pemeriksaan
 clear
 get_public_ip
 check_root_user
 check_openvz_support
-
-# Fungsi untuk menampilkan pesan log dengan timestamp
-log_message() {
-    local message=$1
-    echo -e "$(date +'%Y-%m-%d %H:%M:%S') - $message"
-}
 
 # Fungsi untuk membuat direktori dengan izin yang benar
 create_dir() {
@@ -124,104 +119,108 @@ log_message "Directory and log file creation process completed."
 clear
 
 function addon_domain() {
-clear
-echo -e "   \033[38;5;197m ===========================================\e[0m"
-echo -e "   \033[38;5;227m    Please Select a Domain bellow type.     \e[0m"
-echo -e "   \033[38;5;197m ===========================================\e[0m"
-echo -e "   \033[38;5;197m  1). \e[97;1m Domain Pribadi   \e[0m"
-echo -e "   \033[38;5;197m  2). \e[97;1m Domain Random  \e[0m"
-echo -e "   \033[38;5;197m ===========================================\e[0m"
-echo -e ""
-read -p "   Just Input a number [1-2]:   " host
-echo ""
-if [[ $host == "1" ]]; then
-clear
-IP=$(wget -qO- icanhazip.com);
-echo -e "   \033[38;5;197m ===========================================\e[0m"
-echo -e "   \033[38;5;227m             INPUT YOUR DOMAIN              \e[0m"
-echo -e "   \033[38;5;197m ===========================================\e[0m"
-echo -e ""
-read -p "   input your domain   :   " host1
-echo "IP=" > /var/lib/LT/ipvps.conf
-echo $host1 > /etc/xray/domain
-echo $host1 > /root/domain
-echo "IP=$host1" > /var/lib/LT/ipvps.conf
-elif [[ $host == "2" ]]; then
-clear
-echo -e ""
-echo -e "   \033[38;5;197m ===========================================\e[0m"
-echo -e "   \033[38;5;227m            INPUT YOUR SUBDOMAIN            \e[0m"
-echo -e "   \033[38;5;197m ===========================================\e[0m"
-echo -e ""
-echo -e "   \033[96;1m EXAMPLE :\033[0m"
-echo -e "   \033[97;1m  vpnqu , kontolvpn ,bebas = ini subdomain BENAR ✓\033[0m"
-echo -e "   \033[97;1m  vpnqu.my.id , komtolvpn.com ,bebas.net = ini SALAH x\033[0m"
-echo -e "   \033[38;5;197m ===========================================\e[0m"
-echo -e ""
-read -p "   input your subdomain :   " SUBDOMAIN
+    clear
+    echo -e "   \033[38;5;197m ===========================================\e[0m"
+    echo -e "   \033[38;5;227m    Please Select a Domain bellow type.     \e[0m"
+    echo -e "   \033[38;5;197m ===========================================\e[0m"
+    echo -e "   \033[38;5;197m  1). \e[97;1m Domain Pribadi   \e[0m"
+    echo -e "   \033[38;5;197m  2). \e[97;1m Domain Random  \e[0m"
+    echo -e "   \033[38;5;197m ===========================================\e[0m"
+    echo -e ""
+    read -p "   Just Input a number [1-2]:   " host
+    echo ""
+    if [[ $host == "1" ]]; then
+        clear
+        IP=$(wget -qO- icanhazip.com);
+        echo -e "   \033[38;5;197m ===========================================\e[0m"
+        echo -e "   \033[38;5;227m             INPUT YOUR DOMAIN              \e[0m"
+        echo -e "   \033[38;5;197m ===========================================\e[0m"
+        echo -e ""
+        read -p "   input your domain   :   " host1
+        echo "IP=" > /var/lib/LT/ipvps.conf
+        echo $host1 > /etc/xray/domain
+        echo $host1 > /root/domain
+        echo "IP=$host1" > /var/lib/LT/ipvps.conf
+    elif [[ $host == "2" ]]; then
+        clear
+        echo -e ""
+        echo -e "   \033[38;5;197m ===========================================\e[0m"
+        echo -e "   \033[38;5;227m            INPUT YOUR SUBDOMAIN            \e[0m"
+        echo -e "   \033[38;5;197m ===========================================\e[0m"
+        echo -e ""
+        echo -e "   \033[96;1m EXAMPLE :\033[0m"
+        echo -e "   \033[97;1m  vpnqu , kontolvpn ,bebas = ini subdomain BENAR ✓\033[0m"
+        echo -e "   \033[97;1m  vpnqu.my.id , komtolvpn.com ,bebas.net = ini SALAH x\033[0m"
+        echo -e "   \033[38;5;197m ===========================================\e[0m"
+        echo -e ""
+        read -p "   input your subdomain :   " SUBDOMAIN
 
-# cloudflare value
-API_TOKEN="LBZrKgFI9_UBRGo6x8ZUEmO1NzbfQXPTxb-70zw9"          # API Token Cloudflare
-ZONE_ID="1411ad8a55b429280a52f741550d2e46"                    # Zone ID domain
-DOMAIN_NAME="lunatictunnel.buzz"                              # Nama domain
+        # cloudflare value
+        API_TOKEN="LBZrKgFI9_UBRGo6x8ZUEmO1NzbfQXPTxb-70zw9"          # API Token Cloudflare
+        ZONE_ID="1411ad8a55b429280a52f741550d2e46"                    # Zone ID domain
+        DOMAIN_NAME="lunatictunnel.buzz"                              # Nama domain
 
-# Validasi apakah subdomain diisi
-if [ -z "$SUBDOMAIN" ]; then
-    echo "Subdomain tidak boleh kosong. Skrip akan berhenti."
-    exit 1
-fi
+        # Validasi apakah subdomain diisi
+        if [ -z "$SUBDOMAIN" ]; then
+            echo "Subdomain tidak boleh kosong. Skrip akan berhenti."
+            exit 1
+        fi
 
-# Menambahkan A Record untuk domain utama
-echo "Menambahkan A Record untuk domain utama: $DOMAIN_NAME"
-curl -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
-    -H "Authorization: Bearer $API_TOKEN" \
-    -H "Content-Type: application/json" \
-    --data '{
-      "type": "A",
-      "name": "'$DOMAIN_NAME'",
-      "content": "'$IP_VPS'",
-      "ttl": 3600,
-      "proxied": true
-    }'
+        # Menambahkan A Record untuk domain utama
+        echo "Menambahkan A Record untuk domain utama: $DOMAIN_NAME"
+        curl -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
+            -H "Authorization: Bearer $API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{
+            "type": "A",
+            "name": "'$DOMAIN_NAME'",
+            "content": "'$IP_VPS'",
+            "ttl": 3600,
+            "proxied": true
+        }'
 
-# Menambahkan A Record untuk subdomain yang dimasukkan pengguna
-echo "Menambahkan A Record untuk subdomain: $SUBDOMAIN.$DOMAIN_NAME"
-curl -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
-    -H "Authorization: Bearer $API_TOKEN" \
-    -H "Content-Type: application/json" \
-    --data '{
-      "type": "A",
-      "name": "'$SUBDOMAIN'",
-      "content": "'$IP_VPS'",
-      "ttl": 3600,
-      "proxied": true
-    }'
+        # Menambahkan A Record untuk subdomain yang dimasukkan pengguna
+        echo "Menambahkan A Record untuk subdomain: $SUBDOMAIN.$DOMAIN_NAME"
+        curl -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
+            -H "Authorization: Bearer $API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{
+            "type": "A",
+            "name": "'$SUBDOMAIN'",
+            "content": "'$IP_VPS'",
+            "ttl": 3600,
+            "proxied": true
+        }'
 
-# Menambahkan wildcard A Record untuk semua subdomain di bawah domain
-echo "Menambahkan A Record wildcard untuk *. $DOMAIN_NAME"
-curl -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
-    -H "Authorization: Bearer $API_TOKEN" \
-    -H "Content-Type: application/json" \
-    --data '{
-      "type": "A",
-      "name": "*",
-      "content": "'$IP_VPS'",
-      "ttl": 3600,
-      "proxied": true
-    }'
+        # Menambahkan wildcard A Record untuk semua subdomain di bawah domain
+        echo "Menambahkan A Record wildcard untuk *. $DOMAIN_NAME"
+        curl -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
+            -H "Authorization: Bearer $API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{
+            "type": "A",
+            "name": "*",
+            "content": "'$IP_VPS'",
+            "ttl": 3600,
+            "proxied": true
+        }'
 
-# dapatkan inpo ipvps
-IP=$(wget -qO- icanhazip.com);
-# Menyimpan domain/subdomain ke /etc/xray/domain
-echo "$SUBDOMAIN.$DOMAIN_NAME" > /etc/xray/domain
-echo "$SUBDOMAIN.$DOMAIN_NAME" > /root/domain
-echo "IP=$SUBDOMAIN.$DOMAIN_NAME" > /var/lib/LT/ipvps.conf
-echo "IP=" > /var/lib/LT/ipvps.conf
-# Menyimpan wildcard ke /etc/xray/wildcard
-echo "*.$DOMAIN_NAME" > /etc/xray/wildcard
+        # dapatkan inpo ipvps
+        IP=$(wget -qO- icanhazip.com);
+        # Menyimpan domain/subdomain ke /etc/xray/domain
+        echo "$SUBDOMAIN.$DOMAIN_NAME" > /etc/xray/domain
+        echo "$SUBDOMAIN.$DOMAIN_NAME" > /root/domain
+        echo "IP=$SUBDOMAIN.$DOMAIN_NAME" > /var/lib/LT/ipvps.conf
+        echo "IP=" > /var/lib/LT/ipvps.conf
+        # Menyimpan wildcard ke /etc/xray/wildcard
+        echo "*.$DOMAIN_NAME" > /etc/xray/wildcard
+    fi
 }
+
 addon_domain
 clear
+
+
 
 # data Telegram
 TIMES="10"
@@ -351,12 +350,6 @@ first_setup() {
     esac
 
     print_message "Setup completed successfully."
-}
-
-# Fungsi untuk mencetak pesan dengan format khusus
-print_message() {
-    local message=$1
-    echo -e "$message"
 }
 
 # Fungsi untuk menginstal NGINX tergantung pada distribusi OS
@@ -583,14 +576,6 @@ make_folder_xray() {
 
 
 function install_xray() {
-#!/bin/bash
-
-# Fungsi untuk mencetak pesan log
-print_message() {
-    local message=$1
-    echo -e "$message"
-}
-
 # Direktori untuk domain socket
 domainSock_dir="/run/xray"
 if [ ! -d "$domainSock_dir" ]; then
@@ -769,13 +754,6 @@ EOF
     systemctl enable "$service_name"
     systemctl restart "$service_name"
 }
-
-# Fungsi untuk mencetak pesan log
-print_message() {
-    local message=$1
-    echo -e "$message"
-}
-
 # Direktori untuk menyimpan file yang diunduh
 mkdir -p /usr/bin/limit-ip
 mkdir -p /usr/lunatic/
@@ -818,12 +796,6 @@ done
 
 print_message "UDP Mini setup completed successfully."
 
-}
-
-# Fungsi untuk mencetak pesan log
-log_message() {
-    local message=$1
-    echo -e "$(date +'%Y-%m-%d %H:%M:%S') - $message"
 }
 
 # Fungsi untuk mengunduh dan mengonfigurasi SSHD
@@ -898,12 +870,6 @@ install_dropbear() {
     # Memeriksa status Dropbear service
     log_message "Checking Dropbear service status"
     /etc/init.d/dropbear status
-}
-
-# Fungsi untuk mencetak pesan log
-log_message() {
-    local message=$1
-    echo -e "$(date +'%Y-%m-%d %H:%M:%S') - $message"
 }
 
 # Fungsi untuk menginstal dan mengonfigurasi vnStat
@@ -1029,12 +995,6 @@ install_openvpn() {
     log_message "OpenVPN installation completed successfully."
 }
 
-# Fungsi untuk mencetak pesan log
-log_message() {
-    local message=$1
-    echo -e "$(date +'%Y-%m-%d %H:%M:%S') - $message"
-}
-
 # Fungsi untuk menginstal dan mengonfigurasi cadangan
 install_backup() {
     log_message "Starting backup installation"
@@ -1134,12 +1094,6 @@ EOF
     fi
 
     log_message "Backup installation completed successfully."
-}
-
-# Fungsi untuk mencetak pesan log
-log_message() {
-    local message=$1
-    echo -e "$(date +'%Y-%m-%d %H:%M:%S') - $message"
 }
 
 # Fungsi untuk menginstal dan mengonfigurasi swap dan gotop
@@ -1245,12 +1199,6 @@ install_Fail2ban() {
     log_message "Fail2ban installation and configuration completed successfully."
 }
 
-# Fungsi untuk mencetak pesan log
-log_message() {
-    local message=$1
-    echo -e "$(date +'%Y-%m-%d %H:%M:%S') - $message"
-}
-
 # Fungsi untuk menginstal dan mengonfigurasi Epro
 install_epro() {
     log_message "Starting installation of ws and associated configurations"
@@ -1342,12 +1290,6 @@ install_epro() {
     log_message "Epro installation and configuration completed successfully."
 }
 
-# Fungsi untuk mencetak pesan log
-log_message() {
-    local message=$1
-    echo -e "$(date +'%Y-%m-%d %H:%M:%S') - $message"
-}
-
 # Fungsi untuk merestart layanan dan melakukan pembersihan
 restart_services() {
     log_message "Starting to restart services..."
@@ -1404,12 +1346,6 @@ restart_services() {
     log_message "All services restarted and unnecessary files cleaned up successfully."
 }
 
-# Fungsi untuk mencetak pesan log
-log_message() {
-    local message=$1
-    echo -e "$(date +'%Y-%m-%d %H:%M:%S') - $message"
-}
-
 # Fungsi untuk mengunduh dan mengekstrak file
 download_and_extract() {
     local url=$1
@@ -1459,12 +1395,6 @@ install_menu() {
     download_and_extract "${REPO}feature/LunatiX_py" "/usr/bin"
 
     log_message "Menu installation completed successfully."
-}
-
-# Fungsi untuk mencetak pesan log
-log_message() {
-    local message=$1
-    echo -e "$(date +'%Y-%m-%d %H:%M:%S') - $message"
 }
 
 # Fungsi untuk membuat file .profile untuk root
@@ -1660,12 +1590,6 @@ systemctl enable udp-custom &>/dev/null
 clear
 }
 
-# Fungsi untuk menampilkan pesan log dengan timestamp
-log_message() {
-    local message=$1
-    echo -e "$(date +'%Y-%m-%d %H:%M:%S') - $message"
-}
-
 # Fungsi untuk memastikan bahwa service berjalan dengan benar
 start_service() {
     local service=$1
@@ -1741,11 +1665,6 @@ clear_all
 
 
 install_scripts
-
-# Fungsi untuk menampilkan pesan dengan format yang konsisten
-log_message() {
-    echo -e "$(date +'%Y-%m-%d %H:%M:%S') - $1"
-}
 
 # Fungsi untuk menampilkan pesan sukses
 show_success_message() {
