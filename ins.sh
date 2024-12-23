@@ -889,11 +889,11 @@ install_dropbear() {
 install_vnstat() {
     log_message "Starting vnStat installation"
 
-apt -y install vnstat > /dev/null 2>&1
-/etc/init.d/vnstat restart
-apt -y install libsqlite3-dev > /dev/null 2>&1
-wget https://humdi.net/vnstat/vnstat-2.6.tar.gz
-tar zxvf vnstat-2.6.tar.gz
+    apt -y install vnstat > /dev/null 2>&1
+    /etc/init.d/vnstat restart
+    apt -y install libsqlite3-dev > /dev/null 2>&1
+    wget https://humdi.net/vnstat/vnstat-2.6.tar.gz
+    tar zxvf vnstat-2.6.tar.gz
 cd vnstat-2.6
 ./configure --prefix=/usr --sysconfdir=/etc && make && make install
 cd
@@ -914,14 +914,6 @@ install_openvpn() {
     # Download dan pasang OpenVPN
     log_message "Downloading OpenVPN installer"
     wget ${REPO}ovpn/openvpn && chmod +x openvpn && ./openvpn
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to download or run OpenVPN installer."
-        exit 1
-    fi
-
-    # Restart OpenVPN service
-    log_message "Restarting OpenVPN service"
-    /etc/init.d/openvpn restart
     
     log_message "OpenVPN installation completed successfully."
 }
