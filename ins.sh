@@ -13,26 +13,12 @@ IP_VPS=$(curl -sS ipv4.icanhazip.com)
 # // scripts universal || debian 10,11,12
 # // ====================================
 
-function update_and_upgrade() {
-    clear
-    # Pembaruan sistem
-    echo -e "\e[36;1m UPDATE....       \e[0m"
-    apt update -y
-    echo -e "\e[32;1m update succes..  \e[0m"    
-    clear
-    echo -e "\e[36;1m UPGRADE....      \e[0m"
-    apt upgrade -y
-    echo -e "\e[32;1m upgrade succes.. \e[0m"    
-}
-
 function install_curl_jq() {
     clear
     echo -e "\e[36;1m Install Jq,curl and wget.... \e[0m"
     apt install wget curl jq -y
     echo -e "\e[32;1m install jq,curl,wget succes.. \e[0m" 
 }
-
-update_and_upgrade
 install_curl_jq
 
 
@@ -307,77 +293,6 @@ print_message() {
     echo -e "$message"
 }
 
-# Fungsi untuk setup pertama (timezone, iptables, dan haproxy)
-first_setup() {
-    # Set timezone
-    timedatectl set-timezone Asia/Jakarta
-    print_message "Timezone set to Asia/Jakarta."
-
-    # Konfigurasi iptables-persistent
-    print_message "Configuring iptables-persistent..."
-    echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
-    echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
-
-    # Mengambil nama distribusi OS
-    local os_name
-    os_name=$(awk -F= '/^ID=/ { print $2 }' /etc/os-release | tr -d '"')
-
-    # Mengambil nama lengkap distribusi OS
-    local os_pretty_name
-    os_pretty_name=$(awk -F= '/^PRETTY_NAME=/ { print $2 }' /etc/os-release | tr -d '"')
-
-    # Melakukan setup tergantung pada distribusi
-    case "$os_name" in
-        ubuntu)
-            print_message "Setting up dependencies for Ubuntu: $os_pretty_name"
-            sudo apt update -y
-            sudo apt-get install --no-install-recommends software-properties-common -y
-            sudo add-apt-repository ppa:vbernat/haproxy-2.0 -y
-            sudo apt-get install -y haproxy=2.0.*
-            ;;
-        debian)
-            print_message "Setting up dependencies for Debian: $os_pretty_name"
-            curl -fsSL https://haproxy.debian.net/bernat.debian.org.gpg | gpg --dearmor > /usr/share/keyrings/haproxy.debian.net.gpg
-            echo "deb [signed-by=/usr/share/keyrings/haproxy.debian.net.gpg] http://haproxy.debian.net buster-backports-1.8 main" \
-                | sudo tee /etc/apt/sources.list.d/haproxy.list > /dev/null
-            sudo apt-get update
-            sudo apt-get install -y haproxy=1.8.*
-            ;;
-        *)
-            print_message "Your OS ($os_pretty_name) is not supported. Exiting..."
-            exit 1
-            ;;
-    esac
-
-    print_message "Setup completed successfully."
-}
-
-# Fungsi untuk menginstal NGINX tergantung pada distribusi OS
-nginx_install() {
-    # Mendapatkan nama sistem operasi
-    local os_name
-    os_name=$(awk -F= '/^ID=/ { print $2 }' /etc/os-release | tr -d '"')
-
-    # Mendapatkan nama sistem operasi yang lebih lengkap (untuk menampilkan pesan)
-    local os_pretty_name
-    os_pretty_name=$(awk -F= '/^PRETTY_NAME=/ { print $2 }' /etc/os-release | tr -d '"')
-
-    # Menampilkan pesan yang sesuai berdasarkan sistem operasi
-    case "$os_name" in
-        ubuntu)
-            print_message "Setup nginx for OS: $os_pretty_name"
-            sudo apt-get install nginx -y
-            ;;
-        debian)
-            print_message "Setup nginx for OS: $os_pretty_name"
-            sudo apt install nginx -y
-            ;;
-        *)
-            print_message "Your OS ($os_pretty_name) is not supported."
-            ;;
-    esac
-}
-
 base_package() {
     # Menampilkan pesan sebelum memulai proses
     echo "Memulai pembaruan dan instalasi paket dasar..."
@@ -391,7 +306,7 @@ base_package() {
     # Daftar paket dasar yang diperlukan
     local packages=(
         build-essential libc6 libssl-dev zlib1g-dev libcurl4-openssl-dev libsqlite3-dev 
-        libpng-dev libjpeg-dev libgif-dev libxml2-dev libxslt1-dev zip pwgen openssl 
+        libpng-dev libjpeg-dev haproxy ubuntu-release-upgrader-core libgif-dev libxml2-dev libxslt1-dev zip pwgen openssl 
         netcat socat cron bash-completion bmon ntpdate sudo debconf-utils
         software-properties-common speedtest-cli vnstat libnss3-dev libnspr4-dev pkg-config 
         libpam0g-dev libcap-ng-dev libcap-ng-utils libselinux1-dev libcurl4-nss-dev flex 
@@ -399,7 +314,7 @@ base_package() {
         libxml-parser-perl gcc g++ python htop lsof tar ruby unzip p7zip-full 
         python3-pip libc6 util-linux msmtp-mta ca-certificates bsd-mailx iptables 
         iptables-persistent netfilter-persistent net-tools gnupg gnupg2 lsb-release 
-        shc make cmake git screen xz-utils apt-transport-https gnupg1 dnsutils openvpn 
+        shc make cmake git screen xz-utils apt-transport-https gnupg1 dnsutils
         easy-rsa
     )
 
@@ -462,26 +377,30 @@ base_package() {
     echo "Instalasi dan konfigurasi selesai."
 }
 
+# Fungsi untuk menginstal NGINX tergantung pada distribusi OS
+nginx_install() {
+    # Mendapatkan nama sistem operasi
+    local os_name
+    os_name=$(awk -F= '/^ID=/ { print $2 }' /etc/os-release | tr -d '"')
 
-restart_system() {
-USRSC=$(wget -qO- https://raw.githubusercontent.com/${GIT_USER}/vps_access/main/ip | grep $IP_VPS | awk '{print $2}')
-EXPSC=$(wget -qO- https://raw.githubusercontent.com/${GIT_USER}/vps_access/main/ip | grep $IP_VPS | awk '{print $3}')
-TIMEZONE=$(printf '%(%H:%M:%S)T')
-domain=$(cat /etc/xray/domain)
-TEXT="
-<code>────────────────────</code>
-<b> 🟢 NOTIFICATIONS INSTALL 🟢</b>
-<code>────────────────────</code>
-<code>ID     : </code><code>$USRSC</code>
-<code>Domain : </code><code>$domain</code>
-<code>Date   : </code><code>$TIME</code>
-<code>Time   : </code><code>$TIMEZONE</code>
-<code>Ip vps : </code><code>$IP_VPS</code>
-<code>Exp Sc : </code><code>$EXPSC</code>
-<code>────────────────────</code>
-<i>Automatic Notification from Github</i>
-"'&reply_markup={"inline_keyboard":[[{"text":"⭐ᴏʀᴅᴇʀ⭐","url":"https://t.me/ian_khvicha"},{"text":"⭐ɪɴꜱᴛᴀʟʟ⭐","url":"https://wa.me/6283189774145"}]]}'
-curl -s --max-time $TIMES -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
+    # Mendapatkan nama sistem operasi yang lebih lengkap (untuk menampilkan pesan)
+    local os_pretty_name
+    os_pretty_name=$(awk -F= '/^PRETTY_NAME=/ { print $2 }' /etc/os-release | tr -d '"')
+
+    # Menampilkan pesan yang sesuai berdasarkan sistem operasi
+    case "$os_name" in
+        ubuntu)
+            print_message "Setup nginx for OS: $os_pretty_name"
+            sudo apt-get install nginx -y
+            ;;
+        debian)
+            print_message "Setup nginx for OS: $os_pretty_name"
+            sudo apt install nginx -y
+            ;;
+        *)
+            print_message "Your OS ($os_pretty_name) is not supported."
+            ;;
+    esac
 }
 
 # Fungsi untuk memasang SSL menggunakan acme.sh
@@ -535,6 +454,85 @@ install_sslcert() {
     systemctl restart xray
     
     echo "Sertifikat SSL berhasil dipasang untuk domain $domain."
+}
+
+# Fungsi untuk setup pertama (timezone, iptables, dan haproxy)
+install_haproxy() {
+    # Set timezone
+    timedatectl set-timezone Asia/Jakarta
+    echo "Timezone set to Asia/Jakarta."
+
+    # Konfigurasi iptables-persistent
+    echo "Configuring iptables-persistent..."
+    echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
+    echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
+    apt-get update
+    apt-get install -y iptables-persistent
+
+    # Mengambil nama distribusi OS
+    local os_name
+    os_name=$(awk -F= '/^ID=/ { print $2 }' /etc/os-release | tr -d '"')
+
+    # Mengambil versi distribusi OS
+    local os_version
+    os_version=$(awk -F= '/^VERSION_ID=/ { print $2 }' /etc/os-release | tr -d '"')
+
+    # Menentukan codename Ubuntu
+    local ubuntu_codename
+    if [[ "$os_name" == "ubuntu" ]]; then
+        ubuntu_codename=$(lsb_release -cs)
+        if [[ "$ubuntu_codename" == "noble" ]]; then
+            echo "Codename 'noble' detected, using 'jammy' as fallback."
+            ubuntu_codename="jammy"
+        fi
+    fi
+
+    # Melakukan setup tergantung pada distribusi
+    case "$os_name" in
+        ubuntu)
+            echo "Setting up dependencies for Ubuntu $os_version ($ubuntu_codename)"
+            apt-get update
+            apt-get install -y software-properties-common
+
+            # Tambahkan repository dengan codename yang benar
+            add-apt-repository -y ppa:vbernat/haproxy-2.0
+            sed -i "s|noble|$ubuntu_codename|g" /etc/apt/sources.list.d/vbernat-ubuntu-haproxy-2_0-*.list
+            apt-get update
+
+            # Instalasi HAProxy
+            apt-get install -y haproxy
+            ;;
+        debian)
+            echo "Setting up dependencies for Debian $os_version"
+            curl -fsSL https://haproxy.debian.net/bernat.debian.org.gpg | gpg --dearmor > /usr/share/keyrings/haproxy.debian.net.gpg
+            case "$os_version" in
+                "10")
+                    echo "deb [signed-by=/usr/share/keyrings/haproxy.debian.net.gpg] http://haproxy.debian.net buster-backports main" | \
+                        tee /etc/apt/sources.list.d/haproxy.list > /dev/null
+                    ;;
+                "11")
+                    echo "deb [signed-by=/usr/share/keyrings/haproxy.debian.net.gpg] http://haproxy.debian.net bullseye-backports main" | \
+                        tee /etc/apt/sources.list.d/haproxy.list > /dev/null
+                    ;;
+                "12")
+                    echo "deb [signed-by=/usr/share/keyrings/haproxy.debian.net.gpg] http://haproxy.debian.net bookworm-backports main" | \
+                        tee /etc/apt/sources.list.d/haproxy.list > /dev/null
+                    ;;
+                *)
+                    echo "Unsupported Debian version ($os_version). Exiting..."
+                    exit 1
+                    ;;
+            esac
+            apt-get update
+            apt-get install -y haproxy
+            ;;
+        *)
+            echo "Your OS ($os_name $os_version) is not supported. Exiting..."
+            exit 1
+            ;;
+    esac
+
+    echo "Setup completed successfully."
 }
 
 make_folder_xray() {
@@ -600,8 +598,6 @@ make_folder_xray() {
     # Memberikan izin eksekusi pada direktori log xray
     chmod +x "/var/log/xray"
 }
-
-
 
 function install_xray() {
 # Direktori untuk domain socket
@@ -695,7 +691,7 @@ print_message "Xray installation and configuration completed successfully."
 
 }
 
-function install_ssh(){
+function install_password(){
 clear
 wget -O /etc/pam.d/common-password "${REPO}files/password"
 chmod +x /etc/pam.d/common-password
@@ -1536,20 +1532,39 @@ clear_all() {
 
     log_message "Cleanup complete."
 }
+restart_system() {
+USRSC=$(wget -qO- https://raw.githubusercontent.com/${GIT_USER}/vps_access/main/ip | grep $IP_VPS | awk '{print $2}')
+EXPSC=$(wget -qO- https://raw.githubusercontent.com/${GIT_USER}/vps_access/main/ip | grep $IP_VPS | awk '{print $3}')
+TIMEZONE=$(printf '%(%H:%M:%S)T')
+domain=$(cat /etc/xray/domain)
+TEXT="
+<code>────────────────────</code>
+<b> 🟢 NOTIFICATIONS INSTALL 🟢</b>
+<code>────────────────────</code>
+<code>ID     : </code><code>$USRSC</code>
+<code>Domain : </code><code>$domain</code>
+<code>Date   : </code><code>$TIME</code>
+<code>Time   : </code><code>$TIMEZONE</code>
+<code>Ip vps : </code><code>$IP_VPS</code>
+<code>Exp Sc : </code><code>$EXPSC</code>
+<code>────────────────────</code>
+<i>Automatic Notification from Github</i>
+"'&reply_markup={"inline_keyboard":[[{"text":"⭐ᴏʀᴅᴇʀ⭐","url":"https://t.me/ian_khvicha"},{"text":"⭐ɪɴꜱᴛᴀʟʟ⭐","url":"https://wa.me/6283189774145"}]]}'
+curl -s --max-time $TIMES -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
+}
 
 # Main execution
 start=$(date +%s)  # Start timestamp for cleanup duration
 
 
 function install_scripts() {
-first_setup
-nginx_install
 base_package
+nginx_install
+install_sslcert
+install_haproxy
 make_folder_xray
 install_password
 install_xray
-install_sslcert
-install_ssh
 install_badvpn
 install_sshd
 install_dropbear
