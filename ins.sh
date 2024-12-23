@@ -886,100 +886,22 @@ install_dropbear() {
 install_vnstat() {
     log_message "Starting vnStat installation"
 
-    # Install vnStat
-    log_message "Installing vnStat package"
-    apt -y install vnstat >/dev/null 2>&1
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to install vnStat package."
-        exit 1
-    fi
-
-    # Restart vnStat service
-    log_message "Restarting vnStat service"
-    /etc/init.d/vnstat restart
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to restart vnStat service."
-        exit 1
-    fi
-
-    # Install libsqlite3-dev
-    log_message "Installing libsqlite3-dev package"
-    apt -y install libsqlite3-dev >/dev/null 2>&1
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to install libsqlite3-dev package."
-        exit 1
-    fi
-
-    # Download and install vnStat from source
-    log_message "Downloading vnStat source code"
-    wget https://humdi.net/vnstat/vnstat-2.6.tar.gz
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to download vnStat source code."
-        exit 1
-    fi
-
-    log_message "Extracting vnStat source code"
-    tar zxvf vnstat-2.6.tar.gz
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to extract vnStat source code."
-        exit 1
-    fi
-
-    cd vnstat-2.6
-    log_message "Configuring vnStat"
-    ./configure --prefix=/usr --sysconfdir=/etc && make && make install
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to configure or install vnStat."
-        exit 1
-    fi
-    cd
-
-    # Initialize vnStat for the network interface
-    log_message "Initializing vnStat for the network interface: $NET"
-    vnstat -u -i $NET
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to initialize vnStat for $NET."
-        exit 1
-    fi
-
-    # Update configuration to use correct network interface
-    log_message "Updating vnStat configuration"
-    sed -i 's/Interface "eth0"/Interface "'$NET'"/g' /etc/vnstat.conf
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to update vnStat configuration."
-        exit 1
-    fi
-
-    # Set correct ownership for vnStat data
-    log_message "Setting ownership for vnStat data directory"
-    chown vnstat:vnstat /var/lib/vnstat -R
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to set ownership for /var/lib/vnstat."
-        exit 1
-    fi
-
-    # Enable and restart vnStat service
-    log_message "Enabling and restarting vnStat service"
-    systemctl enable vnstat
-    /etc/init.d/vnstat restart
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: Failed to enable or restart vnStat service."
-        exit 1
-    fi
-
-    # Check status of vnStat service
-    /etc/init.d/vnstat status
-    if [[ $? -ne 0 ]]; then
-        log_message "Error: vnStat service is not running."
-        exit 1
-    fi
-
-    # Clean up
-    log_message "Cleaning up vnStat installation files"
-    rm -f /root/vnstat-2.6.tar.gz
-    rm -rf /root/vnstat-2.6
-
-    log_message "vnStat installation completed successfully."
+apt -y install vnstat > /dev/null 2>&1
+/etc/init.d/vnstat restart
+apt -y install libsqlite3-dev > /dev/null 2>&1
+wget https://humdi.net/vnstat/vnstat-2.6.tar.gz
+tar zxvf vnstat-2.6.tar.gz
+cd vnstat-2.6
+./configure --prefix=/usr --sysconfdir=/etc && make && make install
+cd
+vnstat -u -i $NET
+sed -i 's/Interface "'""eth0""'"/Interface "'""$NET""'"/g' /etc/vnstat.conf
+chown vnstat:vnstat /var/lib/vnstat -R
+systemctl enable vnstat
+/etc/init.d/vnstat restart
+/etc/init.d/vnstat status
+rm -f /root/vnstat-2.6.tar.gz
+rm -rf /root/vnstat-2.6
 }
 
 # Fungsi untuk menginstal dan mengonfigurasi OpenVPN
