@@ -1062,7 +1062,7 @@ function ins_Fail2ban() {
     sed -i 's@DROPBEAR_BANNER=""@DROPBEAR_BANNER="/etc/banner.txt"@g' /etc/default/dropbear
 
     # Unduh banner dari repositori
-    wget -O /etc/banner.txt "${REPO}banner/lunatic.site" >/dev/null 2>&1
+    wget -O /etc/banner.txt "${REPO}banner/issue.net" >/dev/null 2>&1
 
     # Menampilkan pesan sukses
     print_success "Fail2ban and Banner Setup Completed Successfully"
