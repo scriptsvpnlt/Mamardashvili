@@ -233,111 +233,7 @@ export IP=$( curl -s https://ipinfo.io/ip/ )
 
 function first_setup() {
 mkdir -p /etc/haproxy
-
-cat >/etc/haproxy/haproxy.cfg <<-END
-global       
-    stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
-    stats timeout 1d
-    
-    tune.h2.initial-window-size 2147483647
-    tune.ssl.default-dh-param 2048
-
-    pidfile /run/haproxy.pid
-    chroot /var/lib/haproxy
-
-    user haproxy
-    group haproxy
-    daemon
-
-    ssl-default-bind-ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
-    ssl-default-bind-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
-    ssl-default-bind-options no-sslv3 no-tlsv10 no-tlsv11
-
-    ca-base /etc/ssl/certs
-    crt-base /etc/ssl/private
-
-defaults
-    log global
-    mode tcp
-    option dontlognull
-    timeout connect 200ms
-    timeout client  300s
-    timeout server  300s
-    
-frontend multiport
-    mode tcp
-    bind-process 1 2
-    bind *:222-1000 tfo
-    tcp-request inspect-delay 500ms
-    tcp-request content accept if HTTP
-    tcp-request content accept if { req.ssl_hello_type 1 }
-    use_backend recir_http if HTTP 
-    default_backend recir_https
-
-frontend multiports
-    mode tcp
-    bind abns@haproxy-http accept-proxy tfo
-    default_backend recir_https_www
-
-frontend ssl
-    mode tcp
-    bind-process 1
-    bind *:80 tfo
-    bind *:55 tfo
-    bind *:8080 tfo 
-    bind *:8880 tfo
-    bind *:2095 tfo
-    bind *:2082 tfo
-    bind *:2086 tfo
-    bind *:2095 tfo
-    bind abns@haproxy-https accept-proxy ssl crt /etc/haproxy/hap.pem alpn h2,http/1.1 tfo
-    
-    tcp-request inspect-delay 500ms
-    tcp-request content capture req.ssl_sni len 100
-    tcp-request content accept if { req.ssl_hello_type 1 }
-
-    acl chk-02_up hdr(Connection) -i upgrade
-    acl chk-02_ws hdr(Upgrade) -i websocket
-    acl this_payload payload(0,7) -m bin 5353482d322e30
-    acl up-to ssl_fc_alpn -i h2
-
-    use_backend GRUP_FTVPN if up-to
-    use_backend FTVPN if chk-02_up chk-02_ws 
-    use_backend FTVPN if { path_reg -i ^\/(.*) }
-    use_backend BOT_FTVPN if this_payload
-    default_backend CHANNEL_FTVPN
-
-backend recir_https_www
-    mode tcp
-    server misssv-bau 127.0.0.1:2223 check
-     
-backend FTVPN
-    mode http
-    server hencet-bau 127.0.0.1:1010 send-proxy check 
-
-backend GRUP_FTVPN
-    mode tcp
-    server hencet-baus 127.0.0.1:1013 send-proxy check
-    
-backend CHANNEL_FTVPN
-    mode tcp
-    balance roundrobin
-    server nonok-bau 127.0.0.1:1194 check
-    server memek-bau 127.0.0.1:1012 send-proxy check
-
-backend BOT_FTVPN
-    mode tcp
-    server misv-bau 127.0.0.1:2222 check
-    
-backend recir_http
-    mode tcp
-    server loopback-for-http abns@haproxy-http send-proxy-v2 check
-    
-backend recir_https
-    mode tcp
-    server loopback-for-https abns@haproxy-https send-proxy-v2 check
-END
-    
+ 
     # Atur zona waktu
     timedatectl set-timezone Asia/Jakarta
 
@@ -349,7 +245,12 @@ END
     echo "Membuat direktori untuk Xray..."
     mkdir -p /etc/xray
     mkdir -p /var/lib/LT
-
+    
+    # install haproxy.cfg
+    wget "${REPO}cfg_haproxy.sh"
+    bash cfg_haproxy.sh
+    rm -rf /root/cfg_haproxy.sh
+    
     # Identifikasi OS dan versinya
     OS=$(grep -w ID /etc/os-release | cut -d= -f2 | tr -d '"')
     VERSION=$(grep -w VERSION_ID /etc/os-release | cut -d= -f2 | tr -d '"')
@@ -818,6 +719,7 @@ END
 function ssh(){
 clear
 print_install "Memasang Password SSH"
+mkdir -p /etc/pam.d
 wget -O /etc/pam.d/common-password "${REPO}files/password"
 chmod +x /etc/pam.d/common-password
 DEBIAN_FRONTEND=noninteractive dpkg-reconfigure keyboard-configuration
@@ -1390,6 +1292,9 @@ function clear_all() {
         "/root/LICENSE"
         "/root/README.md"
         "/root/domain"
+        "/root/LunatiX2"
+        "/root/LunatiX_py"
+        "/root/snap"
     )
     for file in "${files_to_remove[@]}"; do
         rm -rf $file
@@ -1405,7 +1310,17 @@ function clear_all() {
     # Tampilkan pesan sukses
     print_success "System Cleaned and Hostname Updated Successfully"
 }
-
+function all_res() {
+systemctl restart nginx
+systemctl restart haproxy
+systemctl restart xray
+systemctl restart run_xray
+systemctl restart ws
+systemctl restart openvpn
+systemctl restart ssh
+systemctl restart rc-local
+systemctl restart dropbear
+}
 
 function install_scripts() {
 base_package

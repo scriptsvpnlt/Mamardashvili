@@ -1,17 +1,23 @@
 #!/bin/bash
 clear
+
+    # hapus file lama jika ada
+    rm -rf /etc/nginx/nginx.conf
+    rm -rf /etc/nginx/conf.d/xray.conf
+
+    # buat dir nginx
     mkdir -p /etc/nginx
     mkdir -p /etc/nginx/conf.d
-    # Identifikasi OS dan versinya
-    OS=$(grep -w ID /etc/os-release | cut -d= -f2 | tr -d '"')
-    VERSION=$(grep -w VERSION_ID /etc/os-release | cut -d= -f2 | tr -d '"')
-    
+
+    # detek os
+    OS_UBU=$(lsb_release -is)
+    VERSION_UBU=$(lsb_release -rs | cut -d. -f1)    
     echo "Sistem Operasi terdeteksi: ${OS} ${VERSION}"
 
     # Konfigurasi instalasi HAProxy berdasarkan OS dan versi
-    if [[ "$OS" == "ubuntu" ]]; then
-        case $VERSION in
-        "20.04")
+    if [[ "$OS_UBU" == "ubuntu" ]]; then
+        case $VERSION_UBU in
+        "20")
 cat >/etc/nginx/conf.d/xray.conf<<-END
 server {
     listen 1010 proxy_protocol so_keepalive=on reuseport;
@@ -250,7 +256,7 @@ http {
 END
 
             ;;
-        "24.04" | "24.04.1")
+        "24")
 cat >/etc/nginx/conf.d/xray.conf<<-END
 map $http_upgrade $websocket {
     default 0;
