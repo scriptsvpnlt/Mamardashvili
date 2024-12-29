@@ -741,7 +741,7 @@ ln -fs /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
 sed -i 's/AcceptEnv/#AcceptEnv/g' /etc/ssh/sshd_config
 }
 
-function install_badvpn(){
+function install_badvpn() {
 # Fungsi untuk mengunduh dan mengonfigurasi file
 download_and_configure() {
     local file_url=$1
@@ -909,7 +909,40 @@ install_openvpn() {
 
     # Download dan pasang OpenVPN
     log_message "Downloading OpenVPN installer"
-    wget ${REPO}ovpn/openvpn && chmod +x openvpn && ./openvpn
+    #wget ${REPO}ovpn/openvpn && chmod +x openvpn && ./openvpn
+        # Deteksi versi OS
+    OS=$(lsb_release -si)
+    VERSION=$(lsb_release -sr | cut -d. -f1)
+
+    # Perbarui sistem dan instal dependensi dasar
+    apt-get update -y > /dev/null 2>&1
+    apt-get install -y wget curl apt-transport-https gnupg > /dev/null 2>&1
+
+    # Menambahkan repository OpenVPN sesuai OS dan versi
+    if [[ "$OS" == "Ubuntu" && "$VERSION" -ge 22 ]] || [[ "$OS" == "Debian" && "$VERSION" -ge 11 ]]; then
+        wget -qO - https://packages.openvpn.net/packages-repo.gpg | gpg --dearmor -o /usr/share/keyrings/openvpn.gpg
+        echo "deb [signed-by=/usr/share/keyrings/openvpn.gpg] https://packages.openvpn.net/openvpn3/debian $(lsb_release -cs) main" \
+            > /etc/apt/sources.list.d/openvpn3.list
+        apt-get update -y > /dev/null 2>&1
+        apt-get install -y openvpn3 > /dev/null 2>&1
+    else
+        apt-get install -y openvpn > /dev/null 2>&1
+    fi
+
+    # Konfigurasi OpenVPN
+    wget -q -O /etc/openvpn/server.conf "${REPO}files/server.conf"
+    mkdir -p /etc/openvpn/easy-rsa
+    wget -q -O /etc/openvpn/easy-rsa/easyrsa "${REPO}files/easyrsa"
+    chmod +x /etc/openvpn/easy-rsa/easyrsa
+
+    # Memulai layanan OpenVPN
+    if [[ "$OS" == "Ubuntu" && "$VERSION" -ge 22 ]] || [[ "$OS" == "Debian" && "$VERSION" -ge 11 ]]; then
+        systemctl enable openvpn3-service
+        systemctl start openvpn3-service
+    else
+        systemctl enable openvpn
+        systemctl start openvpn
+    fi
     
     log_message "OpenVPN installation completed successfully."
 }
